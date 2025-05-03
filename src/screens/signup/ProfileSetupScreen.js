@@ -20,6 +20,7 @@ import { COLORS } from '../../styles/theme';
 
 const ProfileSetupScreen = ({ onBack, onComplete }) => {
   const { formData, updateFormData, prevStep, submitForm, resetForm } = useSignup();
+  const relationshipIntent = formData.relationshipIntent || '';
   
   const [profilePicture, setProfilePicture] = useState(formData.profilePicture || null);
   const [governmentId, setGovernmentId] = useState(formData.governmentId || null);
@@ -146,7 +147,7 @@ const ProfileSetupScreen = ({ onBack, onComplete }) => {
               onPress: () => {
                 resetForm();
                 if (onComplete) {
-                  onComplete();
+                  onComplete(relationshipIntent);
                 }
               },
             },
