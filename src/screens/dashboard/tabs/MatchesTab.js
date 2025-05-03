@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -8,8 +8,9 @@ import {
   ScrollView,
   Dimensions,
   Animated,
+  PanResponder,
 } from 'react-native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons, FontAwesome } from '@expo/vector-icons';
 import { COLORS } from '../../../styles/theme';
 
 const { width } = Dimensions.get('window');
@@ -17,6 +18,99 @@ const CARD_WIDTH = width * 0.8;
 const CARD_HEIGHT = CARD_WIDTH * 1.5;
 
 const MatchesTab = () => {
+  const [likeCount, setLikeCount] = useState(0);
+  const [dislikeCount, setDislikeCount] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [showLikeOverlay, setShowLikeOverlay] = useState(false);
+  const [showDislikeOverlay, setShowDislikeOverlay] = useState(false);
+  
+  const position = useRef(new Animated.ValueXY()).current;
+  const rotation = position.x.interpolate({
+    inputRange: [-width / 2, 0, width / 2],
+    outputRange: ['8deg', '0deg', '-8deg'],
+    extrapolate: 'clamp',
+  });
+  
+  const likeOpacity = position.x.interpolate({
+    inputRange: [-width / 4, 0, width / 4],
+    outputRange: [1, 0, 0],
+    extrapolate: 'clamp',
+  });
+  
+  const dislikeOpacity = position.x.interpolate({
+    inputRange: [-width / 4, 0, width / 4],
+    outputRange: [0, 0, 1],
+    extrapolate: 'clamp',
+  });
+  
+  const nextCardOpacity = position.x.interpolate({
+    inputRange: [-width / 2, 0, width / 2],
+    outputRange: [1, 0.8, 1],
+    extrapolate: 'clamp',
+  });
+  
+  const nextCardScale = position.x.interpolate({
+    inputRange: [-width / 2, 0, width / 2],
+    outputRange: [1, 0.9, 1],
+    extrapolate: 'clamp',
+  });
+  
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onPanResponderMove: (_, gesture) => {
+        position.setValue({ x: gesture.dx, y: gesture.dy });
+      },
+      onPanResponderRelease: (_, gesture) => {
+        if (gesture.dx > 120) {
+          swipeRight();
+        } else if (gesture.dx < -120) {
+          swipeLeft();
+        } else {
+          Animated.spring(position, {
+            toValue: { x: 0, y: 0 },
+            friction: 5,
+            useNativeDriver: false,
+          }).start();
+        }
+      },
+    })
+  ).current;
+  
+  const swipeLeft = () => {
+    setShowLikeOverlay(true);
+    setLikeCount(prevCount => prevCount + 1);
+    
+    Animated.timing(position, {
+      toValue: { x: -width, y: 0 },
+      duration: 300,
+      useNativeDriver: false,
+    }).start(() => {
+      setCurrentIndex(prevIndex => 
+        prevIndex === matches.length - 1 ? 0 : prevIndex + 1
+      );
+      position.setValue({ x: 0, y: 0 });
+      setTimeout(() => setShowLikeOverlay(false), 500);
+    });
+  };
+  
+  const swipeRight = () => {
+    setShowDislikeOverlay(true);
+    setDislikeCount(prevCount => prevCount + 1);
+    
+    Animated.timing(position, {
+      toValue: { x: width, y: 0 },
+      duration: 300,
+      useNativeDriver: false,
+    }).start(() => {
+      setCurrentIndex(prevIndex => 
+        prevIndex === matches.length - 1 ? 0 : prevIndex + 1
+      );
+      position.setValue({ x: 0, y: 0 });
+      setTimeout(() => setShowDislikeOverlay(false), 500);
+    });
+  };
+  
   const matches = [
     {
       id: 1,
@@ -145,6 +239,127 @@ const MatchesTab = () => {
     );
   };
 
+  const renderSwipeableCard = () => {
+    const match = matches[currentIndex];
+    
+    return (
+      <Animated.View
+        {...panResponder.panHandlers}
+        style={[
+          styles.swipeableCard,
+          {
+            transform: [
+              { translateX: position.x },
+              { translateY: position.y },
+              { rotate: rotation }
+            ]
+          }
+        ]}
+      >
+        <View style={styles.matchImageContainer}>
+          <Image source={{ uri: match.image }} style={styles.matchImage} />
+          
+          {/* Like Stamp Overlay */}
+          <Animated.View 
+            style={[
+              styles.stampOverlay, 
+              styles.likeStamp,
+              { opacity: likeOpacity }
+            ]}
+          >
+            <Text style={styles.stampText}>LIKE</Text>
+          </Animated.View>
+          
+          {/* Dislike Stamp Overlay */}
+          <Animated.View 
+            style={[
+              styles.stampOverlay, 
+              styles.dislikeStamp,
+              { opacity: dislikeOpacity }
+            ]}
+          >
+            <Text style={styles.stampText}>NOPE</Text>
+          </Animated.View>
+          
+          <View style={styles.matchPercentageContainer}>
+            <Text style={styles.matchPercentage}>{match.matchPercentage}%</Text>
+            <Text style={styles.matchText}>Match</Text>
+          </View>
+        </View>
+        
+        <View style={styles.matchInfo}>
+          <View style={styles.matchNameRow}>
+            <Text style={styles.matchName}>{match.name}, {match.age}</Text>
+            <TouchableOpacity style={styles.likeButton} onPress={swipeLeft}>
+              <Ionicons name="heart" size={24} color="#FF3B30" />
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.matchLocationRow}>
+            <Ionicons name="location-outline" size={16} color="rgba(255, 255, 255, 0.7)" />
+            <Text style={styles.matchLocation}>{match.location}</Text>
+          </View>
+          
+          <Text style={styles.matchDistance}>{match.distance}</Text>
+          
+          <Text style={styles.matchBio} numberOfLines={2}>{match.bio}</Text>
+          
+          <View style={styles.interestsContainer}>
+            {match.interests.map((interest, i) => (
+              <View key={i} style={styles.interestTag}>
+                <Text style={styles.interestText}>{interest}</Text>
+              </View>
+            ))}
+          </View>
+          
+          <View style={styles.cardActions}>
+            <TouchableOpacity style={styles.cardActionButton} onPress={swipeRight}>
+              <Ionicons name="close-circle" size={20} color="#FF3B30" />
+              <Text style={styles.cardActionText}>Pass</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.cardActionButton} onPress={swipeLeft}>
+              <Ionicons name="heart" size={20} color="#34C759" />
+              <Text style={styles.cardActionText}>Like</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Animated.View>
+    );
+  };
+  
+  const renderNextCard = () => {
+    const nextIndex = currentIndex === matches.length - 1 ? 0 : currentIndex + 1;
+    const match = matches[nextIndex];
+    
+    return (
+      <Animated.View
+        style={[
+          styles.swipeableCard,
+          styles.nextCard,
+          {
+            transform: [{ scale: nextCardScale }],
+            opacity: nextCardOpacity,
+          }
+        ]}
+      >
+        <View style={styles.matchImageContainer}>
+          <Image source={{ uri: match.image }} style={styles.matchImage} />
+          <View style={styles.matchPercentageContainer}>
+            <Text style={styles.matchPercentage}>{match.matchPercentage}%</Text>
+            <Text style={styles.matchText}>Match</Text>
+          </View>
+        </View>
+        
+        <View style={styles.matchInfo}>
+          <View style={styles.matchNameRow}>
+            <Text style={styles.matchName}>{match.name}, {match.age}</Text>
+          </View>
+        </View>
+      </Animated.View>
+    );
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -155,22 +370,35 @@ const MatchesTab = () => {
         </TouchableOpacity>
       </View>
       
-      <View style={styles.matchesContainer}>
-        <Animated.FlatList
-          horizontal
-          data={matches}
-          renderItem={({ item, index }) => renderMatchCard(item, index)}
-          keyExtractor={(item) => item.id.toString()}
-          showsHorizontalScrollIndicator={false}
-          snapToInterval={CARD_WIDTH}
-          decelerationRate="fast"
-          contentContainerStyle={styles.matchesList}
-          onScroll={Animated.event(
-            [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-            { useNativeDriver: false }
-          )}
-          scrollEventThrottle={16}
-        />
+      {/* Like/Dislike Counters */}
+      <View style={styles.countersContainer}>
+        <View style={styles.counterItem}>
+          <Ionicons name="heart" size={24} color="#FF3B30" />
+          <Text style={styles.counterText}>{likeCount}</Text>
+        </View>
+        
+        <View style={styles.counterItem}>
+          <Ionicons name="close-circle" size={24} color="#8E8E93" />
+          <Text style={styles.counterText}>{dislikeCount}</Text>
+        </View>
+      </View>
+      
+      {/* Swipe Indicators */}
+      <View style={styles.swipeIndicatorsContainer}>
+        <View style={[styles.swipeIndicator, styles.likeIndicator, showLikeOverlay && styles.activeIndicator]}>
+          <Ionicons name="heart" size={40} color="#FF3B30" />
+          <Text style={styles.indicatorText}>LIKE</Text>
+        </View>
+        
+        <View style={[styles.swipeIndicator, styles.dislikeIndicator, showDislikeOverlay && styles.activeIndicator]}>
+          <Ionicons name="close-circle" size={40} color="#8E8E93" />
+          <Text style={styles.indicatorText}>NOPE</Text>
+        </View>
+      </View>
+      
+      <View style={styles.cardsContainer}>
+        {renderNextCard()}
+        {renderSwipeableCard()}
       </View>
       
       <View style={styles.section}>
@@ -264,22 +492,96 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginLeft: 4,
   },
-  matchesContainer: {
-    height: CARD_HEIGHT,
+  countersContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 40,
+    marginBottom: 10,
+  },
+  counterItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+  },
+  counterText: {
+    color: COLORS.SECONDARY,
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+  swipeIndicatorsContainer: {
+    position: 'absolute',
+    top: '50%',
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    zIndex: 10,
+    pointerEvents: 'none',
+  },
+  swipeIndicator: {
+    alignItems: 'center',
+    opacity: 0.3,
+  },
+  likeIndicator: {
+    alignItems: 'flex-start',
+  },
+  dislikeIndicator: {
+    alignItems: 'flex-end',
+  },
+  activeIndicator: {
+    opacity: 1,
+  },
+  indicatorText: {
+    color: COLORS.SECONDARY,
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginTop: 4,
+  },
+  cardsContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 16,
   },
-  matchesList: {
-    paddingHorizontal: 16,
-  },
-  matchCard: {
+  swipeableCard: {
     width: CARD_WIDTH,
     height: CARD_HEIGHT,
-    marginHorizontal: 8,
+    position: 'absolute',
     borderRadius: 16,
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  nextCard: {
+    zIndex: 0,
+  },
+  stampOverlay: {
+    position: 'absolute',
+    top: '40%',
+    padding: 10,
+    borderWidth: 4,
+    borderRadius: 10,
+    transform: [{ rotate: '-30deg' }],
+    zIndex: 999,
+  },
+  likeStamp: {
+    left: 20,
+    borderColor: '#34C759',
+  },
+  dislikeStamp: {
+    right: 20,
+    borderColor: '#FF3B30',
+  },
+  stampText: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: COLORS.SECONDARY,
   },
   matchImageContainer: {
     height: '60%',
