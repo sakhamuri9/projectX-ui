@@ -21,8 +21,10 @@ const LoginScreen = () => {
   const phoneInputRef = useRef(null);
 
   const validatePhoneNumber = () => {
-    if (!phoneInputRef.current) return false;
-    const isValidNumber = phoneInputRef.current.isValidNumber(phoneNumber);
+    const phoneRegex = /^\d{10}$/;
+    const cleanNumber = phoneNumber.replace(/\D/g, '');
+    const isValidNumber = phoneRegex.test(cleanNumber);
+    
     setIsValid(isValidNumber);
     if (!isValidNumber) {
       setErrorMessage('Please enter a valid phone number');
