@@ -28,7 +28,48 @@ const PersonalInfoScreen = ({ phoneNumber }) => {
   
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showDatePickerModal, setShowDatePickerModal] = useState(false);
+  const [manualDateInput, setManualDateInput] = useState('');
   const [errors, setErrors] = useState({});
+  
+  const generateCalendarDays = () => {
+    const year = dateOfBirth.getFullYear();
+    const month = dateOfBirth.getMonth();
+    
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    
+    const firstDayOfWeek = firstDay.getDay();
+    
+    const days = [];
+    
+    const prevMonthLastDay = new Date(year, month, 0).getDate();
+    for (let i = firstDayOfWeek - 1; i >= 0; i--) {
+      const date = new Date(year, month - 1, prevMonthLastDay - i);
+      days.push({
+        date,
+        currentMonth: false
+      });
+    }
+    
+    for (let i = 1; i <= lastDay.getDate(); i++) {
+      const date = new Date(year, month, i);
+      days.push({
+        date,
+        currentMonth: true
+      });
+    }
+    
+    const remainingDays = 42 - days.length; // 6 rows x 7 days = 42
+    for (let i = 1; i <= remainingDays; i++) {
+      const date = new Date(year, month + 1, i);
+      days.push({
+        date,
+        currentMonth: false
+      });
+    }
+    
+    return days;
+  };
   
   useEffect(() => {
     if (phoneNumber && !formData.phoneNumber) {
@@ -60,6 +101,7 @@ const PersonalInfoScreen = ({ phoneNumber }) => {
     if (Platform.OS === 'ios' || Platform.OS === 'android') {
       setShowDatePicker(true);
     } else {
+      setManualDateInput(''); // Reset manual input when opening modal
       setShowDatePickerModal(true);
     }
   };
@@ -165,14 +207,154 @@ const PersonalInfoScreen = ({ phoneNumber }) => {
                   <View style={styles.modalContainer}>
                     <View style={styles.modalContent}>
                       <Text style={styles.modalTitle}>Select Date of Birth</Text>
-                      <DateTimePicker
-                        value={dateOfBirth}
-                        mode="date"
-                        display="default"
-                        onChange={handleDateChange}
-                        maximumDate={new Date()}
-                        textColor={COLORS.PRIMARY}
-                      />
+                      
+                      {/* Custom calendar for web with manual input option */}
+                      <View style={styles.customCalendarContainer}>
+                        {/* Manual date input field */}
+                        <View style={styles.manualDateInputContainer}>
+                          <Text style={styles.manualDateInputLabel}>Enter date manually:</Text>
+                          <View style={styles.dateInputRow}>
+                            {Platform.OS === 'web' ? (
+                              <input
+                                style={{
+                                  flex: 1,
+                                  height: 40,
+                                  borderWidth: 1,
+                                  borderColor: 'white',
+                                  borderRadius: 8,
+                                  paddingLeft: 12,
+                                  paddingRight: 12,
+                                  color: 'white',
+                                  fontSize: 16,
+                                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                                }}
+                                placeholder="MM/DD/YYYY"
+                                type="text"
+                                value={manualDateInput}
+                                onChange={(e) => {
+                                  const text = e.target.value;
+                                  setManualDateInput(text);
+                                  
+                                  const parts = text.split('/');
+                                  if (parts.length === 3 && parts[2].length === 4) {
+                                    const month = parseInt(parts[0]) - 1;
+                                    const day = parseInt(parts[1]);
+                                    const year = parseInt(parts[2]);
+                                    
+                                    if (!isNaN(month) && !isNaN(day) && !isNaN(year)) {
+                                      const newDate = new Date(year, month, day);
+                                      if (!isNaN(newDate.getTime()) && newDate <= new Date()) {
+                                        setDateOfBirth(newDate);
+                                      }
+                                    }
+                                  }
+                                }}
+                              />
+                            ) : (
+                              <TextInput
+                                style={styles.manualDateInput}
+                                placeholder="MM/DD/YYYY"
+                                placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                                value={formatDate(dateOfBirth)}
+                                onChangeText={(text) => {
+                                  const parts = text.split('/');
+                                  if (parts.length === 3) {
+                                    const month = parseInt(parts[0]) - 1;
+                                    const day = parseInt(parts[1]);
+                                    const year = parseInt(parts[2]);
+                                    
+                                    if (!isNaN(month) && !isNaN(day) && !isNaN(year)) {
+                                      const newDate = new Date(year, month, day);
+                                      if (!isNaN(newDate.getTime()) && newDate <= new Date()) {
+                                        setDateOfBirth(newDate);
+                                      }
+                                    }
+                                  }
+                                }}
+                                keyboardType="numeric"
+                              />
+                            )}
+                            <TouchableOpacity 
+                              style={styles.todayButton}
+                              onPress={() => setDateOfBirth(new Date())}
+                            >
+                              <Text style={styles.todayButtonText}>Today</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                        
+                        <View style={styles.calendarHeader}>
+                          <Text style={styles.calendarTitle}>
+                            {dateOfBirth.toLocaleString('default', { month: 'long' })} {dateOfBirth.getFullYear()}
+                          </Text>
+                          <View style={styles.calendarNavigation}>
+                            <TouchableOpacity 
+                              style={styles.calendarNavButton}
+                              onPress={() => {
+                                const prevMonth = new Date(dateOfBirth);
+                                prevMonth.setMonth(prevMonth.getMonth() - 1);
+                                setDateOfBirth(prevMonth);
+                              }}
+                            >
+                              <Text style={styles.calendarNavButtonText}>◀</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity 
+                              style={styles.calendarNavButton}
+                              onPress={() => {
+                                const nextMonth = new Date(dateOfBirth);
+                                nextMonth.setMonth(nextMonth.getMonth() + 1);
+                                if (nextMonth <= new Date()) {
+                                  setDateOfBirth(nextMonth);
+                                }
+                              }}
+                            >
+                              <Text style={styles.calendarNavButtonText}>▶</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                        
+                        <View style={styles.calendarDaysHeader}>
+                          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
+                            <Text key={index} style={styles.calendarDayHeaderText}>{day}</Text>
+                          ))}
+                        </View>
+                        
+                        <View style={styles.calendarDaysGrid}>
+                          {generateCalendarDays().map((day, index) => (
+                            <TouchableOpacity
+                              key={index}
+                              style={[
+                                styles.calendarDay,
+                                day.currentMonth && styles.currentMonthDay,
+                                day.date.getDate() === dateOfBirth.getDate() && 
+                                day.date.getMonth() === dateOfBirth.getMonth() && 
+                                day.date.getFullYear() === dateOfBirth.getFullYear() && 
+                                styles.selectedDay,
+                                day.date > new Date() && styles.disabledDay
+                              ]}
+                              disabled={day.date > new Date()}
+                              onPress={() => {
+                                if (day.date <= new Date()) {
+                                  setDateOfBirth(day.date);
+                                }
+                              }}
+                            >
+                              <Text style={[
+                                styles.calendarDayText,
+                                day.currentMonth && styles.currentMonthDayText,
+                                day.date.getDate() === dateOfBirth.getDate() && 
+                                day.date.getMonth() === dateOfBirth.getMonth() && 
+                                day.date.getFullYear() === dateOfBirth.getFullYear() && 
+                                styles.selectedDayText,
+                                day.date > new Date() && styles.disabledDayText
+                              ]}>
+                                {day.date.getDate()}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      </View>
+                      
                       <View style={styles.modalButtons}>
                         <TouchableOpacity
                           style={styles.modalButton}
@@ -182,7 +364,25 @@ const PersonalInfoScreen = ({ phoneNumber }) => {
                         </TouchableOpacity>
                         <TouchableOpacity
                           style={[styles.modalButton, styles.modalButtonConfirm]}
-                          onPress={() => setShowDatePickerModal(false)}
+                          onPress={() => {
+                            if (manualDateInput) {
+                              const parts = manualDateInput.split('/');
+                              if (parts.length === 3) {
+                                const month = parseInt(parts[0]) - 1;
+                                const day = parseInt(parts[1]);
+                                const year = parseInt(parts[2]);
+                                
+                                if (!isNaN(month) && !isNaN(day) && !isNaN(year)) {
+                                  const newDate = new Date(year, month, day);
+                                  if (!isNaN(newDate.getTime()) && newDate <= new Date()) {
+                                    setDateOfBirth(newDate);
+                                  }
+                                }
+                              }
+                            }
+                            setManualDateInput('');
+                            setShowDatePickerModal(false);
+                          }}
                         >
                           <Text style={styles.modalButtonConfirmText}>Confirm</Text>
                         </TouchableOpacity>
@@ -393,6 +593,155 @@ const styles = StyleSheet.create({
   },
   disabledInput: {
     opacity: 0.7,
+  },
+  webDatePickerContainer: {
+    width: '100%',
+    marginBottom: 10,
+  },
+  customCalendarContainer: {
+    width: '100%',
+    backgroundColor: COLORS.PRIMARY,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.SECONDARY,
+    padding: 16,
+    marginBottom: 20,
+    shadowColor: COLORS.SECONDARY,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  calendarHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  calendarTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: COLORS.SECONDARY,
+    fontFamily: 'serif',
+    letterSpacing: 1,
+  },
+  calendarNavigation: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  calendarNavButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: COLORS.SECONDARY,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  calendarNavButtonText: {
+    color: COLORS.SECONDARY,
+    fontSize: 16,
+  },
+  calendarDaysHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 8,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  calendarDayHeaderText: {
+    width: 36,
+    textAlign: 'center',
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: 'rgba(255, 255, 255, 0.7)',
+  },
+  calendarDaysGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-around',
+  },
+  calendarDay: {
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+    borderRadius: 18,
+  },
+  calendarDayText: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.4)',
+  },
+  currentMonthDay: {
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  currentMonthDayText: {
+    color: COLORS.SECONDARY,
+  },
+  selectedDay: {
+    backgroundColor: COLORS.SECONDARY,
+    borderWidth: 0,
+    transform: [{ scale: 1.1 }],
+    elevation: 3,
+  },
+  selectedDayText: {
+    color: COLORS.PRIMARY,
+    fontWeight: 'bold',
+  },
+  disabledDay: {
+    opacity: 0.3,
+  },
+  disabledDayText: {
+    color: 'rgba(255, 255, 255, 0.3)',
+  },
+  manualDateInputContainer: {
+    marginBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.2)',
+    paddingBottom: 16,
+  },
+  manualDateInputLabel: {
+    fontSize: 14,
+    color: COLORS.SECONDARY,
+    marginBottom: 8,
+    fontWeight: '500',
+  },
+  dateInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  manualDateInput: {
+    flex: 1,
+    height: 40,
+    borderWidth: 1,
+    borderColor: COLORS.SECONDARY,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    color: COLORS.SECONDARY,
+    fontSize: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  todayButton: {
+    marginLeft: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderWidth: 1,
+    borderColor: COLORS.SECONDARY,
+  },
+  todayButtonText: {
+    color: COLORS.SECONDARY,
+    fontSize: 14,
+    fontWeight: '500',
   },
   modalContainer: {
     flex: 1,
