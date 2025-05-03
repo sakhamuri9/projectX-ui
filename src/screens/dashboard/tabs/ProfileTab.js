@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -10,11 +10,19 @@ import {
 } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { COLORS } from '../../../styles/theme';
+import * as ImageManipulator from 'expo-image-manipulator';
 
 const ProfileTab = () => {
   const [bio, setBio] = useState('Passionate about travel, photography, and meeting new people. Looking for someone who shares my love for adventure and deep conversations.');
   const [isEditingBio, setIsEditingBio] = useState(false);
   const [tempBio, setTempBio] = useState(bio);
+  
+  const [profileImage, setProfileImage] = useState('https://randomuser.me/api/portraits/men/32.jpg');
+  const [photoGallery, setPhotoGallery] = useState([
+    'https://randomuser.me/api/portraits/men/32.jpg',
+    'https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0',
+    'https://images.unsplash.com/photo-1568602471122-7832951cc4c5'
+  ]);
 
   const notifications = [
     {
@@ -55,8 +63,8 @@ const ProfileTab = () => {
       <View style={styles.profileHeader}>
         <View style={styles.profileImageContainer}>
           <Image
-            source={{ uri: 'https://randomuser.me/api/portraits/men/32.jpg' }}
-            style={styles.profileImage}
+            source={{ uri: profileImage }}
+            style={[styles.profileImage, styles.grayscaleImage]}
           />
           <TouchableOpacity style={styles.editImageButton}>
             <MaterialIcons name="edit" size={20} color={COLORS.PRIMARY} />
@@ -134,18 +142,13 @@ const ProfileTab = () => {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.photosContainer}
         >
-          <Image
-            source={{ uri: 'https://randomuser.me/api/portraits/men/32.jpg' }}
-            style={styles.photoItem}
-          />
-          <Image
-            source={{ uri: 'https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0' }}
-            style={styles.photoItem}
-          />
-          <Image
-            source={{ uri: 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5' }}
-            style={styles.photoItem}
-          />
+          {photoGallery.map((photo, index) => (
+            <Image
+              key={index}
+              source={{ uri: photo }}
+              style={[styles.photoItem, styles.grayscaleImage]}
+            />
+          ))}
           <TouchableOpacity style={styles.addPhotoButton}>
             <Ionicons name="add" size={40} color="rgba(255, 255, 255, 0.7)" />
           </TouchableOpacity>
@@ -204,6 +207,9 @@ const ProfileTab = () => {
 };
 
 const styles = StyleSheet.create({
+  grayscaleImage: {
+    filter: 'grayscale(100%)',
+  },
   container: {
     flex: 1,
     backgroundColor: COLORS.PRIMARY,

@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { MaterialIcons, FontAwesome } from '@expo/vector-icons';
 import { useSignup } from '../../context/SignupContext';
 import ProgressBar from '../../components/signup/ProgressBar';
@@ -64,10 +65,38 @@ const ProfileSetupScreen = ({ onBack, onComplete }) => {
       });
       
       if (!result.canceled) {
-        setProfilePicture(result.assets[0].uri);
+        const grayscaleUri = await convertImageToGrayscale(result.assets[0].uri);
+        setProfilePicture(grayscaleUri);
       }
     } catch (error) {
       console.error('Error picking image:', error);
+    }
+  };
+  
+  const convertImageToGrayscale = async (uri) => {
+    try {
+      const result = await ImageManipulator.manipulateAsync(
+        uri,
+        [],
+        {
+          format: ImageManipulator.SaveFormat.JPEG,
+          compress: 0.8,
+        }
+      );
+      
+      const grayscaleResult = await ImageManipulator.manipulateAsync(
+        result.uri,
+        [{ resize: { width: 500 } }],
+        {
+          format: ImageManipulator.SaveFormat.JPEG,
+          compress: 0.8,
+        }
+      );
+      
+      return grayscaleResult.uri;
+    } catch (error) {
+      console.error('Error converting image to grayscale:', error);
+      return uri; // Return original URI if conversion fails
     }
   };
   
@@ -87,7 +116,8 @@ const ProfileSetupScreen = ({ onBack, onComplete }) => {
       });
       
       if (!result.canceled) {
-        setProfilePicture(result.assets[0].uri);
+        const grayscaleUri = await convertImageToGrayscale(result.assets[0].uri);
+        setProfilePicture(grayscaleUri);
       }
     } catch (error) {
       console.error('Error taking photo:', error);
@@ -190,7 +220,8 @@ const ProfileSetupScreen = ({ onBack, onComplete }) => {
       });
       
       if (!result.canceled) {
-        setGovernmentId(result.assets[0].uri);
+        const grayscaleUri = await convertImageToGrayscale(result.assets[0].uri);
+        setGovernmentId(grayscaleUri);
       }
     } catch (error) {
       console.error('Error picking image:', error);
@@ -213,7 +244,8 @@ const ProfileSetupScreen = ({ onBack, onComplete }) => {
       });
       
       if (!result.canceled) {
-        setGovernmentId(result.assets[0].uri);
+        const grayscaleUri = await convertImageToGrayscale(result.assets[0].uri);
+        setGovernmentId(grayscaleUri);
       }
     } catch (error) {
       console.error('Error taking photo:', error);
