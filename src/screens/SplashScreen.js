@@ -8,12 +8,12 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../styles/theme';
-import FontAwesome from 'react-native-vector-icons/FontAwesome';
+import { FontAwesome } from '@expo/vector-icons';
 
 const DoveIcon = ({ size = 48, color = 'white' }) => {
   return (
     <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-      <FontAwesome name="dove" size={size} color={color} />
+      <FontAwesome name="twitter" size={size} color={color} />
     </View>
   );
 };
