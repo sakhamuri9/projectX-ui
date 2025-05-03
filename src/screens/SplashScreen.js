@@ -3,42 +3,91 @@ import {
   StyleSheet,
   View,
   Text,
-  TouchableOpacity,
   SafeAreaView,
+  Pressable,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../styles/theme';
+import Svg, { Circle, G } from 'react-native-svg';
+
+const InterlockedRings = ({ width = 120, height = 60 }) => {
+  return (
+    <Svg width={width} height={height} viewBox="0 0 120 60">
+      <G>
+        {/* Left Ring */}
+        <Circle
+          cx="40"
+          cy="30"
+          r="25"
+          stroke="white"
+          strokeWidth="2"
+          fill="transparent"
+        />
+        {/* Right Ring */}
+        <Circle
+          cx="80"
+          cy="30"
+          r="25"
+          stroke="white"
+          strokeWidth="2"
+          fill="transparent"
+        />
+      </G>
+    </Svg>
+  );
+};
 
 const SplashScreen = ({ onSignIn, onSignUp }) => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
       
-      <View style={styles.flex1} />
+      {/* Vertical line at the top */}
+      <View style={styles.verticalLine} />
       
+      {/* Brand section with gradient background */}
       <View style={styles.brandSection}>
-        <Text style={styles.title}>SoulNest</Text>
-        <Text style={styles.subtitle}>Where hearts meet, stories begin.</Text>
+        {/* Gradient background */}
+        <View style={styles.gradientBackground} />
+        
+        {/* Interlocked Rings above the logo */}
+        <View style={styles.ringsContainer}>
+          <InterlockedRings />
+        </View>
+        
+        {/* App name with different styling for each part */}
+        <Text style={styles.title}>
+          <Text style={styles.titleSoul}>Soul</Text>
+          <Text style={styles.titleNest}>Nest</Text>
+        </Text>
+        
+        {/* Tagline with border */}
+        <View style={styles.taglineContainer}>
+          <Text style={styles.taglineText}>Where hearts meet, stories begin.</Text>
+        </View>
       </View>
       
-      <View style={styles.flex1} />
-      
+      {/* Action buttons */}
       <View style={styles.actionButtons}>
-        <View style={styles.buttonRow}>
-          <TouchableOpacity 
-            style={styles.signInButton}
-            onPress={onSignIn}
-          >
-            <Text style={styles.signInButtonText}>Sign In</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={styles.signUpButton}
-            onPress={onSignUp}
-          >
-            <Text style={styles.signUpButtonText}>Sign Up</Text>
-          </TouchableOpacity>
-        </View>
+        <Pressable 
+          style={({ pressed }) => [
+            styles.button,
+            pressed && styles.buttonPressed
+          ]}
+          onPress={onSignIn}
+        >
+          <Text style={styles.buttonText}>Sign In</Text>
+        </Pressable>
+        
+        <Pressable 
+          style={({ pressed }) => [
+            styles.button,
+            pressed && styles.buttonPressed
+          ]}
+          onPress={onSignUp}
+        >
+          <Text style={styles.buttonText}>Sign Up</Text>
+        </Pressable>
       </View>
     </SafeAreaView>
   );
@@ -48,66 +97,81 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.PRIMARY,
-    paddingHorizontal: 24,
-    paddingVertical: 48,
+    paddingHorizontal: 32,
+    paddingVertical: 64,
     justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  flex1: {
-    flex: 1,
+  verticalLine: {
+    height: 64,
+    width: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    marginBottom: 32,
   },
   brandSection: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 32,
+    position: 'relative',
+  },
+  gradientBackground: {
+    position: 'absolute',
+    width: 192,
+    height: 192,
+    borderRadius: 96,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    opacity: 0.5,
+    zIndex: -1,
+  },
+  ringsContainer: {
+    marginBottom: 16,
+    alignItems: 'center',
   },
   title: {
     fontSize: 36,
-    fontWeight: 'bold',
     color: COLORS.SECONDARY,
-    marginBottom: 8,
-    fontStyle: 'italic',
-    letterSpacing: 1,
+    marginBottom: 24,
+    letterSpacing: 0.5,
   },
-  subtitle: {
+  titleSoul: {
+    fontFamily: 'serif',
+    fontWeight: '400',
+  },
+  titleNest: {
+    fontWeight: 'bold',
+  },
+  taglineContainer: {
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.7)',
+    borderRadius: 50,
+    paddingVertical: 8,
+    paddingHorizontal: 24,
+  },
+  taglineText: {
     fontSize: 14,
     color: COLORS.SECONDARY,
-    opacity: 0.8,
-    letterSpacing: 0.5,
+    textAlign: 'center',
   },
   actionButtons: {
     width: '100%',
-    marginTop: 32,
-  },
-  buttonRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     gap: 16,
   },
-  signInButton: {
+  button: {
     flex: 1,
     paddingVertical: 14,
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     borderRadius: 50,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: COLORS.SECONDARY,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  signUpButton: {
-    flex: 1,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 50,
-    backgroundColor: COLORS.SECONDARY,
-    alignItems: 'center',
-    justifyContent: 'center',
+  buttonPressed: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
-  signInButtonText: {
+  buttonText: {
     color: COLORS.SECONDARY,
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  signUpButtonText: {
-    color: COLORS.PRIMARY,
     fontSize: 16,
     fontWeight: '500',
   },
