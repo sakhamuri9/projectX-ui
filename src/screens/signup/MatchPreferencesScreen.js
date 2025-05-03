@@ -15,7 +15,7 @@ import { useSignup } from '../../context/SignupContext';
 import ProgressBar from '../../components/signup/ProgressBar';
 import { COLORS } from '../../styles/theme';
 
-const MatchPreferencesScreen = () => {
+const MatchPreferencesScreen = (props) => {
   const { formData, updateFormData, nextStep, prevStep } = useSignup();
   
   const [lookingFor, setLookingFor] = useState(formData.lookingFor || '');
@@ -87,6 +87,9 @@ const MatchPreferencesScreen = () => {
         });
         setLoading(false);
         nextStep();
+        if (props.onComplete) {
+          props.onComplete();
+        }
       }, 500);
     }
   };

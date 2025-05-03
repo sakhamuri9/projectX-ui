@@ -18,7 +18,8 @@ import { useSignup } from '../../context/SignupContext';
 import ProgressBar from '../../components/signup/ProgressBar';
 import { COLORS } from '../../styles/theme';
 
-const PersonalInfoScreen = ({ phoneNumber }) => {
+const PersonalInfoScreen = (props) => {
+  const { phoneNumber } = props;
   const { formData, updateFormData, nextStep } = useSignup();
   
   const [fullName, setFullName] = useState(formData.fullName || '');
@@ -138,6 +139,9 @@ const PersonalInfoScreen = ({ phoneNumber }) => {
         location,
       });
       nextStep();
+      if (props.onComplete) {
+        props.onComplete();
+      }
     }
   };
 
