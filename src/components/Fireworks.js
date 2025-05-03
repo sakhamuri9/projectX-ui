@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
+import { View, StyleSheet, Dimensions, Platform } from 'react-native';
 import LottieView from 'lottie-react-native';
 
 const { width, height } = Dimensions.get('window');
@@ -8,10 +8,14 @@ const Fireworks = ({ play = false, style }) => {
   const animationRef = useRef(null);
 
   useEffect(() => {
-    if (play && animationRef.current) {
+    if (play && animationRef.current && Platform.OS !== 'web') {
       animationRef.current.play();
     }
   }, [play]);
+
+  if (Platform.OS === 'web') {
+    return null;
+  }
 
   return (
     <View style={[styles.container, style]}>
