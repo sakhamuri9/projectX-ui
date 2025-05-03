@@ -27,6 +27,7 @@
     "react-async-hook": "^4.0.0",
     "react-dom": "18.2.0",
     "react-native": "0.71.14",
+    "react-native-gesture-handler": "^2.25.0",
     "react-native-otp-inputs": "^7.4.0",
     "react-native-phone-number-input": "^2.1.0",
     "react-native-svg": "13.4.0",
