@@ -12,7 +12,7 @@ import PhoneInput from 'react-native-phone-number-input';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../styles/theme';
 
-const LoginScreen = () => {
+const LoginScreen = ({ onSendOTP }) => {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [formattedPhoneNumber, setFormattedPhoneNumber] = useState('');
   const [isValid, setIsValid] = useState(true);
@@ -43,11 +43,15 @@ const LoginScreen = () => {
       
       const random = Math.random();
       if (random < 0.8) {
-        Alert.alert(
-          'OTP Sent',
-          `OTP has been sent to ${formattedPhoneNumber}`,
-          [{ text: 'OK' }]
-        );
+        if (onSendOTP) {
+          onSendOTP(formattedPhoneNumber);
+        } else {
+          Alert.alert(
+            'OTP Sent',
+            `OTP has been sent to ${formattedPhoneNumber}`,
+            [{ text: 'OK' }]
+          );
+        }
       } else {
         throw new Error('Network error');
       }

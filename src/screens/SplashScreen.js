@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -9,6 +9,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../styles/theme';
 import { FontAwesome } from '@expo/vector-icons';
+import Fireworks from '../components/Fireworks';
 
 const DoveIcon = ({ size = 48, color = 'white' }) => {
   return (
@@ -19,9 +20,22 @@ const DoveIcon = ({ size = 48, color = 'white' }) => {
 };
 
 const SplashScreen = ({ onSignIn, onSignUp }) => {
+  const [showFireworks, setShowFireworks] = useState(false);
+  
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowFireworks(true);
+    }, 1000);
+    
+    return () => clearTimeout(timer);
+  }, []);
+  
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
+      
+      {/* Fireworks animation */}
+      {showFireworks && <Fireworks play={showFireworks} />}
       
       {/* Vertical line at the top */}
       <View style={styles.verticalLine} />
