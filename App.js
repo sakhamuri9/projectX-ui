@@ -113,7 +113,10 @@ export default function App() {
           <SignupProvider>
             <MatchPreferencesScreen 
               onBack={() => setCurrentScreen('signup-step3')}
-              onComplete={() => setCurrentScreen('signup-step5')}
+              onComplete={(intent) => {
+                setRelationshipIntent(intent);
+                setCurrentScreen('signup-step5');
+              }}
             />
           </SignupProvider>
         );
