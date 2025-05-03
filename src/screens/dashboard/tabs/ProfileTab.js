@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   View,
@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   ScrollView,
   TextInput,
+  Animated,
+  Modal,
 } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { COLORS } from '../../../styles/theme';
@@ -16,15 +18,28 @@ const ProfileTab = () => {
   const [bio, setBio] = useState('Passionate about travel, photography, and meeting new people. Looking for someone who shares my love for adventure and deep conversations.');
   const [isEditingBio, setIsEditingBio] = useState(false);
   const [tempBio, setTempBio] = useState(bio);
+  const [bioCharLimit] = useState(150);
   
   const [profileImage, setProfileImage] = useState('https://randomuser.me/api/portraits/men/32.jpg');
   const [processedProfileImage, setProcessedProfileImage] = useState(null);
   const [photoGallery, setPhotoGallery] = useState([
     'https://randomuser.me/api/portraits/men/32.jpg',
     'https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0',
-    'https://images.unsplash.com/photo-1568602471122-7832951cc4c5'
+    'https://images.unsplash.com/photo-1568602471122-7832951cc4c5',
+    'https://images.unsplash.com/photo-1492447273231-0f8fecec1e3a',
+    'https://images.unsplash.com/photo-1519058082700-08a0b56da9b4',
+    'https://images.unsplash.com/photo-1463453091185-61582044d556',
+    'https://images.unsplash.com/photo-1516914943479-89db7d9ae7f2',
+    'https://images.unsplash.com/photo-1530268729831-4b0b9e170218',
+    'https://images.unsplash.com/photo-1544723795-3fb6469f5b39'
   ]);
   const [processedGallery, setProcessedGallery] = useState([]);
+  const [showGallery, setShowGallery] = useState(false);
+  const [selectedPhoto, setSelectedPhoto] = useState(0);
+  
+  const likesAnim = useRef(new Animated.Value(0)).current;
+  const viewsAnim = useRef(new Animated.Value(0)).current;
+  const chatsAnim = useRef(new Animated.Value(0)).current;
   
   useEffect(() => {
     const convertProfileImage = async () => {
@@ -94,6 +109,40 @@ const ProfileTab = () => {
     convertProfileImage();
     convertGalleryImages();
   }, [profileImage, photoGallery]);
+  
+  useEffect(() => {
+    const animateValue = (animValue, toValue, duration = 1500) => {
+      Animated.timing(animValue, {
+        toValue,
+        duration,
+        useNativeDriver: false,
+      }).start();
+    };
+    
+    setTimeout(() => {
+      animateValue(likesAnim, 82);
+      animateValue(viewsAnim, 154);
+      animateValue(chatsAnim, 6);
+    }, 300);
+  }, []);
+  
+  const likesAnimText = likesAnim.interpolate({
+    inputRange: [0, 82],
+    outputRange: ['0', '82'],
+    extrapolate: 'clamp',
+  });
+  
+  const viewsAnimText = viewsAnim.interpolate({
+    inputRange: [0, 154],
+    outputRange: ['0', '154'],
+    extrapolate: 'clamp',
+  });
+  
+  const chatsAnimText = chatsAnim.interpolate({
+    inputRange: [0, 6],
+    outputRange: ['0', '6'],
+    extrapolate: 'clamp',
+  });
 
   const notifications = [
     {
@@ -128,6 +177,14 @@ const ProfileTab = () => {
     setTempBio(bio);
     setIsEditingBio(false);
   };
+  
+  const AnimatedNumber = ({ value, style }) => {
+    return (
+      <Animated.Text style={style}>
+        {value}
+      </Animated.Text>
+    );
+  };
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -145,20 +202,24 @@ const ProfileTab = () => {
         <Text style={styles.profileName}>Alex Johnson, 28</Text>
         <Text style={styles.profileLocation}>New York, NY</Text>
         
+        <TouchableOpacity style={styles.editProfileButton}>
+          <Text style={styles.editProfileButtonText}>Edit Profile</Text>
+        </TouchableOpacity>
+        
         <View style={styles.statsContainer}>
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>85%</Text>
-            <Text style={styles.statLabel}>Profile</Text>
+            <AnimatedNumber value={likesAnimText} style={styles.statValue} />
+            <Text style={styles.statLabel}>❤️ Likes</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>24</Text>
-            <Text style={styles.statLabel}>Matches</Text>
+            <AnimatedNumber value={viewsAnimText} style={styles.statValue} />
+            <Text style={styles.statLabel}>👀 Profile Views</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>8</Text>
-            <Text style={styles.statLabel}>Chats</Text>
+            <AnimatedNumber value={chatsAnimText} style={styles.statValue} />
+            <Text style={styles.statLabel}>💬 Pending Chats</Text>
           </View>
         </View>
       </View>
@@ -179,10 +240,20 @@ const ProfileTab = () => {
               style={styles.bioInput}
               multiline
               value={tempBio}
-              onChangeText={setTempBio}
+              onChangeText={(text) => {
+                if (text.length <= bioCharLimit) {
+                  setTempBio(text);
+                }
+              }}
               placeholder="Write something about yourself..."
               placeholderTextColor="rgba(255, 255, 255, 0.5)"
+              maxLength={bioCharLimit}
             />
+            <View style={styles.bioCharCounter}>
+              <Text style={styles.bioCharCounterText}>
+                {tempBio.length}/{bioCharLimit}
+              </Text>
+            </View>
             <View style={styles.bioEditButtons}>
               <TouchableOpacity style={styles.bioEditButton} onPress={handleCancelBio}>
                 <Text style={styles.bioEditButtonText}>Cancel</Text>
@@ -208,71 +279,116 @@ const ProfileTab = () => {
           </TouchableOpacity>
         </View>
         
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.photosContainer}
-        >
+        <View style={styles.photoGrid}>
           {(processedGallery.length > 0 ? processedGallery : photoGallery).map((photo, index) => (
-            <Image
-              key={index}
-              source={{ uri: photo }}
-              style={styles.photoItem}
-            />
+            <TouchableOpacity 
+              key={index} 
+              style={styles.photoGridItem}
+              onPress={() => {
+                setSelectedPhoto(index);
+                setShowGallery(true);
+              }}
+            >
+              <Image
+                source={{ uri: photo }}
+                style={styles.photoGridImage}
+              />
+            </TouchableOpacity>
           ))}
-          <TouchableOpacity style={styles.addPhotoButton}>
-            <Ionicons name="add" size={40} color="rgba(255, 255, 255, 0.7)" />
+          <TouchableOpacity style={styles.addPhotoGridButton}>
+            <Ionicons name="add" size={30} color="rgba(255, 255, 255, 0.7)" />
           </TouchableOpacity>
-        </ScrollView>
+        </View>
       </View>
       
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Recent Notifications</Text>
-          <TouchableOpacity>
-            <Text style={styles.seeAllText}>See All</Text>
-          </TouchableOpacity>
+          <Text style={styles.sectionTitle}>Match Preferences</Text>
         </View>
         
-        {notifications.map((notification) => (
-          <View 
-            key={notification.id} 
-            style={[
-              styles.notificationItem, 
-              !notification.read && styles.unreadNotification
-            ]}
-          >
-            <View style={styles.notificationIcon}>
-              {notification.type === 'like' && (
-                <Ionicons name="heart" size={20} color="#FF3B30" />
-              )}
-              {notification.type === 'match' && (
-                <Ionicons name="checkmark-circle" size={20} color="#34C759" />
-              )}
-              {notification.type === 'message' && (
-                <Ionicons name="chatbubble" size={20} color="#007AFF" />
-              )}
-            </View>
-            <View style={styles.notificationContent}>
-              <Text style={styles.notificationText}>
-                <Text style={styles.notificationUser}>{notification.user}</Text>
-                {notification.type === 'like' && ' liked your profile'}
-                {notification.type === 'match' && ' matched with you'}
-                {notification.type === 'message' && ' sent you a message'}
-              </Text>
-              <Text style={styles.notificationTime}>{notification.time}</Text>
-            </View>
-            {!notification.read && <View style={styles.unreadDot} />}
+        <View style={styles.preferenceCard}>
+          <View style={styles.preferenceItem}>
+            <Text style={styles.preferenceLabel}>Looking for:</Text>
+            <Text style={styles.preferenceValue}>Female, Age 24–30</Text>
           </View>
-        ))}
+          
+          <View style={styles.preferenceItem}>
+            <Text style={styles.preferenceLabel}>Location:</Text>
+            <Text style={styles.preferenceValue}>10 miles around NYC</Text>
+          </View>
+          
+          <TouchableOpacity style={styles.editPreferencesButton}>
+            <Text style={styles.editPreferencesButtonText}>Edit Preferences</Text>
+            <MaterialIcons name="chevron-right" size={20} color={COLORS.SECONDARY} />
+          </TouchableOpacity>
+        </View>
       </View>
       
       <View style={styles.section}>
-        <TouchableOpacity style={styles.settingsButton}>
-          <Ionicons name="settings-outline" size={20} color={COLORS.SECONDARY} />
-          <Text style={styles.settingsButtonText}>Account Settings</Text>
-        </TouchableOpacity>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Notifications</Text>
+          <TouchableOpacity>
+            <Text style={styles.viewAllText}>View All</Text>
+          </TouchableOpacity>
+        </View>
+        
+        <View style={styles.notificationsFeed}>
+          <View style={styles.notificationItem}>
+            <View style={[styles.notificationIcon, styles.likeIcon]}>
+              <Ionicons name="heart" size={18} color="#fff" />
+            </View>
+            <Text style={styles.notificationText}>Someone liked you</Text>
+          </View>
+          
+          <View style={styles.notificationItem}>
+            <View style={[styles.notificationIcon, styles.viewIcon]}>
+              <Ionicons name="eye" size={18} color="#fff" />
+            </View>
+            <Text style={styles.notificationText}>Someone pinged your profile</Text>
+          </View>
+          
+          <View style={styles.notificationItem}>
+            <View style={[styles.notificationIcon, styles.matchIcon]}>
+              <Ionicons name="checkmark-circle" size={18} color="#fff" />
+            </View>
+            <Text style={styles.notificationText}>Matched with David, 91%</Text>
+          </View>
+        </View>
       </View>
+      
+      <TouchableOpacity style={styles.floatingActionButton}>
+        <Text style={styles.actionButtonText}>Start Matching</Text>
+      </TouchableOpacity>
+      
+      {/* Full Screen Gallery Modal */}
+      <Modal
+        visible={showGallery}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowGallery(false)}
+      >
+        <View style={styles.galleryModal}>
+          <TouchableOpacity 
+            style={styles.galleryCloseButton}
+            onPress={() => setShowGallery(false)}
+          >
+            <Ionicons name="close" size={28} color={COLORS.SECONDARY} />
+          </TouchableOpacity>
+          
+          <Image
+            source={{ uri: (processedGallery.length > 0 ? processedGallery : photoGallery)[selectedPhoto] }}
+            style={styles.fullScreenImage}
+            resizeMode="contain"
+          />
+          
+          <View style={styles.galleryNav}>
+            {/* Pagination indicators */}
+            {photoGallery.map((_, index) => (
+              <View key={index} style={[styles.galleryDot, selectedPhoto === index && styles.galleryDotActive]} />
+            ))}
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 };
@@ -323,6 +439,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: 'rgba(255, 255, 255, 0.7)',
     marginBottom: 16,
+  },
+  editProfileButton: {
+    backgroundColor: COLORS.SECONDARY,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 25,
+    marginBottom: 20,
+  },
+  editProfileButtonText: {
+    color: COLORS.PRIMARY,
+    fontWeight: 'bold',
+    fontSize: 14,
   },
   statsContainer: {
     flexDirection: 'row',
@@ -382,6 +510,14 @@ const styles = StyleSheet.create({
     minHeight: 100,
     textAlignVertical: 'top',
   },
+  bioCharCounter: {
+    alignItems: 'flex-end',
+    marginTop: 4,
+  },
+  bioCharCounterText: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.5)',
+  },
   bioEditButtons: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
@@ -404,84 +540,160 @@ const styles = StyleSheet.create({
     color: COLORS.PRIMARY,
     fontWeight: 'bold',
   },
-  photosContainer: {
-    paddingVertical: 8,
+  photoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
   },
-  photoItem: {
-    width: 120,
-    height: 160,
-    borderRadius: 12,
-    marginRight: 12,
+  photoGridItem: {
+    width: '32%',
+    aspectRatio: 1,
+    marginBottom: '2%',
   },
-  addPhotoButton: {
-    width: 120,
-    height: 160,
-    borderRadius: 12,
+  photoGridImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 8,
+  },
+  addPhotoGridButton: {
+    width: '32%',
+    aspectRatio: 1,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.3)',
     borderStyle: 'dashed',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  seeAllText: {
+  galleryModal: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fullScreenImage: {
+    width: '100%',
+    height: '80%',
+  },
+  galleryCloseButton: {
+    position: 'absolute',
+    top: 40,
+    right: 20,
+    zIndex: 10,
+  },
+  galleryNav: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'absolute',
+    bottom: 40,
+    width: '100%',
+  },
+  galleryDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    marginHorizontal: 4,
+  },
+  galleryDotActive: {
+    backgroundColor: COLORS.SECONDARY,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  preferenceCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 10,
+    padding: 16,
+  },
+  preferenceItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  preferenceLabel: {
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.7)',
+  },
+  preferenceValue: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: COLORS.SECONDARY,
+  },
+  editPreferencesButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    marginTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  editPreferencesButtonText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: COLORS.SECONDARY,
+    marginRight: 4,
+  },
+  notificationsFeed: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 10,
+    padding: 12,
   },
   notificationItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.05)',
   },
-  unreadNotification: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-  },
   notificationIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
-  notificationContent: {
-    flex: 1,
+  likeIcon: {
+    backgroundColor: '#FF3B30',
+  },
+  viewIcon: {
+    backgroundColor: '#007AFF',
+  },
+  matchIcon: {
+    backgroundColor: '#34C759',
   },
   notificationText: {
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.9)',
-    marginBottom: 4,
   },
-  notificationUser: {
+  viewAllText: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.7)',
     fontWeight: 'bold',
-    color: COLORS.SECONDARY,
   },
-  notificationTime: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.5)',
-  },
-  unreadDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#007AFF',
-    marginLeft: 8,
-  },
-  settingsButton: {
-    flexDirection: 'row',
+  floatingActionButton: {
+    backgroundColor: COLORS.SECONDARY,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 30,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 8,
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 16,
+    elevation: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
   },
-  settingsButtonText: {
+  actionButtonText: {
+    color: COLORS.PRIMARY,
+    fontWeight: 'bold',
     fontSize: 16,
-    color: COLORS.SECONDARY,
-    marginLeft: 8,
   },
 });
 
