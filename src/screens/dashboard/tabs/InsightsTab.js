@@ -1,19 +1,97 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
   Text,
   ScrollView,
   TouchableOpacity,
+  Image,
+  Modal,
+  Dimensions,
+  Share,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import { COLORS } from '../../../styles/theme';
+import { PieChart } from 'react-native-chart-kit';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const InsightsTab = () => {
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
+  
+  const screenWidth = Dimensions.get('window').width;
+  
   const profileViews = 128;
   const likesReceived = 43;
   const matchRate = 68; // percentage
   const profileCompleteness = 85; // percentage
+  
+  const personalityData = [
+    {
+      name: 'Creative',
+      population: 35,
+      color: '#FF6B6B',
+      legendFontColor: '#FFF',
+      legendFontSize: 12,
+    },
+    {
+      name: 'Ambitious',
+      population: 40,
+      color: '#4ECDC4',
+      legendFontColor: '#FFF',
+      legendFontSize: 12,
+    },
+    {
+      name: 'Adventurous',
+      population: 25,
+      color: '#FFD166',
+      legendFontColor: '#FFF',
+      legendFontSize: 12,
+    },
+  ];
+  
+  const locationData = [
+    { city: 'New York', views: 42, percentage: 300 },
+    { city: 'Los Angeles', views: 28, percentage: 200 },
+    { city: 'Chicago', views: 15, percentage: 100 },
+  ];
+  
+  const engagementData = [
+    { day: 'Mon', morning: 5, afternoon: 7, evening: 12, night: 8 },
+    { day: 'Tue', morning: 6, afternoon: 8, evening: 15, night: 10 },
+    { day: 'Wed', morning: 8, afternoon: 10, evening: 18, night: 12 },
+    { day: 'Thu', morning: 7, afternoon: 9, evening: 14, night: 9 },
+    { day: 'Fri', morning: 9, afternoon: 12, evening: 22, night: 18 },
+    { day: 'Sat', morning: 10, afternoon: 15, evening: 25, night: 20 },
+    { day: 'Sun', morning: 8, afternoon: 11, evening: 16, night: 14 },
+  ];
+  
+  const completionTasks = [
+    { task: 'Add 1 more interest', completed: false },
+    { task: 'Upload 1 more photo', completed: false },
+    { task: 'Answer 1 prompt', completed: false },
+  ];
+  
+  const trendingTags = [
+    { tag: 'Photography', popularity: 92 },
+    { tag: 'Hiking', popularity: 87 },
+    { tag: 'Cooking', popularity: 78 },
+    { tag: 'Yoga', popularity: 72 },
+    { tag: 'Travel', popularity: 68 },
+  ];
+  
+  const topPhoto = {
+    url: 'https://randomuser.me/api/portraits/men/32.jpg',
+    likeRate: 60,
+  };
+  
+  const vibeRatings = ['Mysterious', 'Stylish', 'Witty'];
+  
+  const boostRecommendation = {
+    day: 'Friday',
+    time: '8:00 PM',
+    multiplier: '10x',
+  };
   
   const weeklyData = [
     { day: 'Mon', views: 12 },
@@ -26,6 +104,20 @@ const InsightsTab = () => {
   ];
   
   const maxViews = Math.max(...weeklyData.map(item => item.views));
+  
+  const shareInsights = async () => {
+    try {
+      await Share.share({
+        message: 'Check out my SoulNest Stats! 💖\n\n' +
+                 `Profile Views: ${profileViews}\n` +
+                 `Likes: ${likesReceived}\n` +
+                 `Match Rate: ${matchRate}%\n\n` +
+                 '#SoulNestStats',
+      });
+    } catch (error) {
+      console.log(error.message);
+    }
+  };
   
   const ProgressRing = ({ percentage, size = 80, strokeWidth = 8, label, value }) => {
     const radius = (size - strokeWidth) / 2;
@@ -75,16 +167,126 @@ const InsightsTab = () => {
       </View>
     );
   };
+  
+  const EngagementTimeBlock = ({ value, maxValue, isHighest }) => {
+    const intensity = Math.min(value / maxValue, 1);
+    const backgroundColor = isHighest 
+      ? 'rgba(255, 255, 255, 0.9)' 
+      : `rgba(255, 255, 255, ${0.2 + intensity * 0.6})`;
+    
+    return (
+      <View 
+        style={[
+          styles.timeBlock, 
+          { backgroundColor }
+        ]} 
+      />
+    );
+  };
+  
+  const ShareableCard = ({ visible, onClose }) => {
+    return (
+      <Modal
+        visible={visible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={onClose}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.shareableCard}>
+            <View style={styles.shareableCardHeader}>
+              <Text style={styles.shareableCardTitle}>SoulNest Stats</Text>
+              <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                <Ionicons name="close" size={24} color={COLORS.SECONDARY} />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.shareableCardContent}>
+              <View style={styles.shareableStat}>
+                <Ionicons name="eye" size={24} color={COLORS.SECONDARY} />
+                <Text style={styles.shareableStatValue}>{profileViews}</Text>
+                <Text style={styles.shareableStatLabel}>Profile Views</Text>
+              </View>
+              
+              <View style={styles.shareableStat}>
+                <Ionicons name="heart" size={24} color={COLORS.SECONDARY} />
+                <Text style={styles.shareableStatValue}>{likesReceived}</Text>
+                <Text style={styles.shareableStatLabel}>Likes</Text>
+              </View>
+              
+              <View style={styles.shareableStat}>
+                <Ionicons name="flash" size={24} color={COLORS.SECONDARY} />
+                <Text style={styles.shareableStatValue}>{matchRate}%</Text>
+                <Text style={styles.shareableStatLabel}>Match Rate</Text>
+              </View>
+            </View>
+            
+            <TouchableOpacity style={styles.shareButton} onPress={() => {
+              onClose();
+              shareInsights();
+            }}>
+              <Text style={styles.shareButtonText}>Share Stats</Text>
+              <Ionicons name="share-social" size={18} color={COLORS.PRIMARY} />
+            </TouchableOpacity>
+            
+            <Text style={styles.shareableCardFooter}>#SoulNestStats</Text>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+  
+  const PhotoModal = ({ visible, onClose, photo }) => {
+    return (
+      <Modal
+        visible={visible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={onClose}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.photoModalCard}>
+            <View style={styles.photoModalHeader}>
+              <Text style={styles.photoModalTitle}>Your Top-Performing Photo</Text>
+              <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                <Ionicons name="close" size={24} color={COLORS.SECONDARY} />
+              </TouchableOpacity>
+            </View>
+            
+            <Image source={{ uri: photo.url }} style={styles.fullSizePhoto} />
+            
+            <Text style={styles.photoModalStats}>
+              This photo gets you {photo.likeRate}% more right swipes
+            </Text>
+            
+            <TouchableOpacity style={styles.setAsDefaultButton}>
+              <Text style={styles.setAsDefaultButtonText}>Set as Profile Picture</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Your Insights</Text>
-        <TouchableOpacity style={styles.refreshButton}>
-          <Ionicons name="refresh" size={20} color={COLORS.SECONDARY} />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity 
+            style={styles.shareInsightButton}
+            onPress={() => setShowShareModal(true)}
+          >
+            <Ionicons name="share-social" size={20} color={COLORS.SECONDARY} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.refreshButton}>
+            <Ionicons name="refresh" size={20} color={COLORS.SECONDARY} />
+          </TouchableOpacity>
+        </View>
       </View>
       
+      {/* Summary Card */}
       <View style={styles.summaryCard}>
         <Text style={styles.summaryTitle}>This Week's Summary</Text>
         <Text style={styles.summarySubtitle}>May 1 - May 7</Text>
@@ -108,98 +310,307 @@ const InsightsTab = () => {
         </View>
       </View>
       
+      {/* 1. Match Personality Insights */}
       <View style={styles.card}>
         <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>Profile Activity</Text>
+          <Text style={styles.cardTitle}>Match Personality Insights</Text>
           <TouchableOpacity>
             <Text style={styles.cardAction}>Details</Text>
           </TouchableOpacity>
         </View>
         
-        <View style={styles.activityStats}>
-          <View style={styles.activityStat}>
-            <Text style={styles.activityStatValue}>{profileViews}</Text>
-            <Text style={styles.activityStatLabel}>Profile Views</Text>
-          </View>
-          <View style={styles.activityStat}>
-            <Text style={styles.activityStatValue}>{likesReceived}</Text>
-            <Text style={styles.activityStatLabel}>Likes Received</Text>
-          </View>
+        <Text style={styles.cardSubtitle}>
+          Who's viewing your profile — and what type they are?
+        </Text>
+        
+        <View style={styles.pieChartContainer}>
+          <PieChart
+            data={personalityData}
+            width={screenWidth - 64}
+            height={180}
+            chartConfig={{
+              backgroundColor: COLORS.PRIMARY,
+              backgroundGradientFrom: COLORS.PRIMARY,
+              backgroundGradientTo: COLORS.PRIMARY,
+              color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+            }}
+            accessor="population"
+            backgroundColor="transparent"
+            paddingLeft="15"
+            absolute
+          />
         </View>
         
-        <View style={styles.chartContainer}>
-          <Text style={styles.chartTitle}>Weekly Profile Views</Text>
-          <View style={styles.chart}>
-            {weeklyData.map((item, index) => (
-              <View key={index} style={styles.chartColumn}>
-                <View 
-                  style={[
-                    styles.chartBar, 
-                    { 
-                      height: `${(item.views / maxViews) * 100}%`,
-                      backgroundColor: item.views === maxViews ? '#FFFFFF' : 'rgba(255, 255, 255, 0.7)',
-                    }
-                  ]} 
-                />
-                <Text style={styles.chartLabel}>{item.day}</Text>
-              </View>
-            ))}
+        <View style={styles.recommendationsContainer}>
+          <Text style={styles.recommendationTitle}>Recommended Matches:</Text>
+          <View style={styles.recommendationTags}>
+            <View style={[styles.recommendationTag, { backgroundColor: 'rgba(255, 107, 107, 0.2)' }]}>
+              <Text style={styles.recommendationTagText}>Sarah, Creative</Text>
+            </View>
+            <View style={[styles.recommendationTag, { backgroundColor: 'rgba(78, 205, 196, 0.2)' }]}>
+              <Text style={styles.recommendationTagText}>Michael, Ambitious</Text>
+            </View>
+            <View style={[styles.recommendationTag, { backgroundColor: 'rgba(255, 209, 102, 0.2)' }]}>
+              <Text style={styles.recommendationTagText}>Emma, Adventurous</Text>
+            </View>
           </View>
         </View>
       </View>
       
+      {/* 2. Location Heatmap */}
       <View style={styles.card}>
         <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>Improve Your Profile</Text>
+          <Text style={styles.cardTitle}>Location Heatmap</Text>
         </View>
         
-        <View style={styles.tipsList}>
-          <View style={styles.tipItem}>
-            <View style={styles.tipIcon}>
-              <Ionicons name="camera" size={20} color={COLORS.SECONDARY} />
+        <Text style={styles.cardSubtitle}>
+          Where are most of your profile views coming from?
+        </Text>
+        
+        <View style={styles.locationList}>
+          {locationData.map((location, index) => (
+            <View key={index} style={styles.locationItem}>
+              <View style={styles.locationInfo}>
+                <Text style={styles.locationCity}>{location.city}</Text>
+                <Text style={styles.locationViews}>{location.views} views</Text>
+              </View>
+              <View style={styles.locationBar}>
+                <View 
+                  style={[
+                    styles.locationBarFill, 
+                    { width: `${(location.percentage / 300) * 100}%` }
+                  ]} 
+                />
+              </View>
             </View>
-            <View style={styles.tipContent}>
-              <Text style={styles.tipTitle}>Add more photos</Text>
-              <Text style={styles.tipDescription}>
-                Profiles with 4+ photos get 40% more matches
-              </Text>
-            </View>
-            <TouchableOpacity style={styles.tipAction}>
-              <Text style={styles.tipActionText}>Add</Text>
-            </TouchableOpacity>
-          </View>
-          
-          <View style={styles.tipItem}>
-            <View style={styles.tipIcon}>
-              <Ionicons name="text" size={20} color={COLORS.SECONDARY} />
-            </View>
-            <View style={styles.tipContent}>
-              <Text style={styles.tipTitle}>Complete your bio</Text>
-              <Text style={styles.tipDescription}>
-                A detailed bio increases your chances by 30%
-              </Text>
-            </View>
-            <TouchableOpacity style={styles.tipAction}>
-              <Text style={styles.tipActionText}>Edit</Text>
-            </TouchableOpacity>
-          </View>
-          
-          <View style={styles.tipItem}>
-            <View style={styles.tipIcon}>
-              <Ionicons name="heart" size={20} color={COLORS.SECONDARY} />
-            </View>
-            <View style={styles.tipContent}>
-              <Text style={styles.tipTitle}>Add more interests</Text>
-              <Text style={styles.tipDescription}>
-                Shared interests are the #1 conversation starter
-              </Text>
-            </View>
-            <TouchableOpacity style={styles.tipAction}>
-              <Text style={styles.tipActionText}>Add</Text>
-            </TouchableOpacity>
-          </View>
+          ))}
+        </View>
+        
+        <View style={styles.locationInsight}>
+          <Ionicons name="flame" size={20} color="#FF6B6B" />
+          <Text style={styles.locationInsightText}>
+            People near New York view your profile 3x more often
+          </Text>
         </View>
       </View>
+      
+      {/* 3. Engagement Timing Graph */}
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>Engagement Timing</Text>
+        </View>
+        
+        <Text style={styles.cardSubtitle}>
+          Best times to get noticed?
+        </Text>
+        
+        <View style={styles.timingContainer}>
+          <View style={styles.timingLabels}>
+            <Text style={styles.timingLabel}>Morning</Text>
+            <Text style={styles.timingLabel}>Afternoon</Text>
+            <Text style={styles.timingLabel}>Evening</Text>
+            <Text style={styles.timingLabel}>Night</Text>
+          </View>
+          
+          <View style={styles.timingGrid}>
+            {engagementData.map((day, dayIndex) => (
+              <View key={dayIndex} style={styles.timingColumn}>
+                <Text style={styles.timingDay}>{day.day}</Text>
+                <View style={styles.timingBlocks}>
+                  {Object.entries(day)
+                    .filter(([key]) => key !== 'day')
+                    .map(([timeOfDay, value], timeIndex) => {
+                      const maxValue = Math.max(
+                        ...engagementData.map(d => d[timeOfDay])
+                      );
+                      const isHighest = value === maxValue && maxValue > 15;
+                      
+                      return (
+                        <EngagementTimeBlock 
+                          key={timeIndex}
+                          value={value}
+                          maxValue={25}
+                          isHighest={isHighest}
+                        />
+                      );
+                    })}
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
+        
+        <View style={styles.timingInsight}>
+          <Ionicons name="time" size={20} color="#4ECDC4" />
+          <Text style={styles.timingInsightText}>
+            Post stories at 8PM on Friday for max exposure
+          </Text>
+        </View>
+      </View>
+      
+      {/* 4. Profile Completion Score */}
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>Profile Completion</Text>
+        </View>
+        
+        <View style={styles.completionScoreContainer}>
+          <View style={styles.completionScoreCircle}>
+            <Text style={styles.completionScoreValue}>{profileCompleteness}%</Text>
+          </View>
+          <View style={styles.completionDetails}>
+            <Text style={styles.completionTitle}>Almost there!</Text>
+            <Text style={styles.completionSubtitle}>Complete these tasks:</Text>
+          </View>
+        </View>
+        
+        <View style={styles.completionTasks}>
+          {completionTasks.map((task, index) => (
+            <View key={index} style={styles.completionTask}>
+              <View style={styles.completionCheckbox}>
+                {task.completed ? (
+                  <Ionicons name="checkmark" size={16} color={COLORS.PRIMARY} />
+                ) : null}
+              </View>
+              <Text style={styles.completionTaskText}>{task.task}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+      
+      {/* 5. Trending Profile Tags */}
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>Trending Profile Tags</Text>
+        </View>
+        
+        <Text style={styles.cardSubtitle}>
+          What's popular this week in your region?
+        </Text>
+        
+        <View style={styles.trendingTagsContainer}>
+          {trendingTags.map((tag, index) => (
+            <View key={index} style={styles.trendingTagItem}>
+              <View style={styles.trendingTagInfo}>
+                <Text style={styles.trendingTagName}>{tag.tag}</Text>
+                <View style={styles.trendingTagPopularity}>
+                  <Ionicons 
+                    name="trending-up" 
+                    size={14} 
+                    color={COLORS.SECONDARY} 
+                    style={styles.trendingIcon}
+                  />
+                  <Text style={styles.trendingTagScore}>{tag.popularity}%</Text>
+                </View>
+              </View>
+              <TouchableOpacity style={styles.addTagButton}>
+                <Text style={styles.addTagButtonText}>Add</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
+        </View>
+      </View>
+      
+      {/* 6. Most-Liked Photo Suggestion */}
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>Most-Liked Photo</Text>
+        </View>
+        
+        <Text style={styles.cardSubtitle}>
+          This photo gets you {topPhoto.likeRate}% more right swipes
+        </Text>
+        
+        <TouchableOpacity 
+          style={styles.topPhotoContainer}
+          onPress={() => setShowPhotoModal(true)}
+        >
+          <Image 
+            source={{ uri: topPhoto.url }} 
+            style={styles.topPhoto}
+          />
+          <View style={styles.topPhotoOverlay}>
+            <Text style={styles.topPhotoText}>View Full Size</Text>
+          </View>
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={styles.setAsProfileButton}>
+          <Text style={styles.setAsProfileButtonText}>Set as Profile Picture</Text>
+        </TouchableOpacity>
+      </View>
+      
+      {/* 7. Vibe Rating */}
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>Your Vibe</Text>
+        </View>
+        
+        <View style={styles.vibeContainer}>
+          {vibeRatings.map((vibe, index) => (
+            <View key={index} style={styles.vibeTag}>
+              <Text style={styles.vibeTagText}>{vibe}</Text>
+            </View>
+          ))}
+        </View>
+        
+        <Text style={styles.vibeDescription}>
+          Based on match feedback and interaction patterns
+        </Text>
+      </View>
+      
+      {/* 8. Boost Recommendation */}
+      <View style={styles.card}>
+        <LinearGradient
+          colors={['rgba(255, 107, 107, 0.2)', 'rgba(255, 107, 107, 0.05)']}
+          style={styles.boostCard}
+        >
+          <View style={styles.boostHeader}>
+            <Ionicons name="flash" size={24} color="#FF6B6B" />
+            <Text style={styles.boostTitle}>Boost Recommendation</Text>
+          </View>
+          
+          <Text style={styles.boostDescription}>
+            Boost now to reach {boostRecommendation.multiplier} more people!
+          </Text>
+          
+          <View style={styles.boostDetails}>
+            <View style={styles.boostDetail}>
+              <Ionicons name="calendar" size={16} color="rgba(255, 255, 255, 0.7)" />
+              <Text style={styles.boostDetailText}>{boostRecommendation.day}</Text>
+            </View>
+            <View style={styles.boostDetail}>
+              <Ionicons name="time" size={16} color="rgba(255, 255, 255, 0.7)" />
+              <Text style={styles.boostDetailText}>{boostRecommendation.time}</Text>
+            </View>
+          </View>
+          
+          <TouchableOpacity style={styles.boostButton}>
+            <Text style={styles.boostButtonText}>Boost Now</Text>
+            <Ionicons name="flash" size={16} color={COLORS.PRIMARY} />
+          </TouchableOpacity>
+        </LinearGradient>
+      </View>
+      
+      {/* 9. Shareable Insight Card Button */}
+      <TouchableOpacity 
+        style={styles.shareInsightsButton}
+        onPress={() => setShowShareModal(true)}
+      >
+        <Ionicons name="share-social" size={20} color={COLORS.PRIMARY} />
+        <Text style={styles.shareInsightsButtonText}>Share Your Stats</Text>
+      </TouchableOpacity>
+      
+      {/* Modals */}
+      <ShareableCard 
+        visible={showShareModal} 
+        onClose={() => setShowShareModal(false)} 
+      />
+      
+      <PhotoModal 
+        visible={showPhotoModal} 
+        onClose={() => setShowPhotoModal(false)} 
+        photo={topPhoto} 
+      />
     </ScrollView>
   );
 };
@@ -220,6 +631,19 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: COLORS.SECONDARY,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  shareInsightButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
   },
   refreshButton: {
     width: 36,
@@ -306,108 +730,502 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   cardTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: COLORS.SECONDARY,
   },
+  cardSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginBottom: 16,
+  },
   cardAction: {
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.7)',
   },
-  activityStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 24,
-  },
-  activityStat: {
+  
+  pieChartContainer: {
     alignItems: 'center',
+    marginVertical: 16,
   },
-  activityStatValue: {
-    fontSize: 24,
+  recommendationsContainer: {
+    marginTop: 16,
+  },
+  recommendationTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: COLORS.SECONDARY,
+    marginBottom: 8,
+  },
+  recommendationTags: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  recommendationTag: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  recommendationTagText: {
+    fontSize: 12,
+    color: COLORS.SECONDARY,
+    fontWeight: '500',
+  },
+  
+  locationList: {
+    marginVertical: 16,
+  },
+  locationItem: {
+    marginBottom: 12,
+  },
+  locationInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  locationCity: {
+    fontSize: 14,
     fontWeight: 'bold',
     color: COLORS.SECONDARY,
   },
-  activityStatLabel: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.7)',
-    marginTop: 4,
-  },
-  chartContainer: {
-    marginTop: 8,
-  },
-  chartTitle: {
+  locationViews: {
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.7)',
-    marginBottom: 12,
   },
-  chart: {
-    flexDirection: 'row',
-    height: 150,
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    paddingTop: 16,
+  locationBar: {
+    height: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 3,
+    overflow: 'hidden',
   },
-  chartColumn: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'flex-end',
+  locationBarFill: {
     height: '100%',
+    backgroundColor: COLORS.SECONDARY,
+    borderRadius: 3,
   },
-  chartBar: {
-    width: 8,
-    borderRadius: 4,
-    marginBottom: 8,
-  },
-  chartLabel: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.7)',
-  },
-  tipsList: {
+  locationInsight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 107, 107, 0.1)',
+    padding: 12,
+    borderRadius: 8,
     marginTop: 8,
   },
-  tipItem: {
+  locationInsightText: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginLeft: 8,
+  },
+  
+  timingContainer: {
+    marginVertical: 16,
+  },
+  timingLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+    paddingHorizontal: 8,
+  },
+  timingLabel: {
+    fontSize: 10,
+    color: 'rgba(255, 255, 255, 0.5)',
+    width: '25%',
+    textAlign: 'center',
+  },
+  timingGrid: {
+    flexDirection: 'row',
+    height: 120,
+    justifyContent: 'space-between',
+  },
+  timingColumn: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  timingDay: {
+    fontSize: 10,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginBottom: 4,
+  },
+  timingBlocks: {
+    flex: 1,
+    width: '100%',
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+  },
+  timeBlock: {
+    flex: 1,
+    margin: 1,
+    borderRadius: 2,
+  },
+  timingInsight: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    backgroundColor: 'rgba(78, 205, 196, 0.1)',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  timingInsightText: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginLeft: 8,
+  },
+  
+  completionScoreContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 16,
+  },
+  completionScoreCircle: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderWidth: 3,
+    borderColor: COLORS.SECONDARY,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  completionScoreValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: COLORS.SECONDARY,
+  },
+  completionDetails: {
+    flex: 1,
+  },
+  completionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: COLORS.SECONDARY,
+    marginBottom: 4,
+  },
+  completionSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.7)',
+  },
+  completionTasks: {
+    marginTop: 8,
+  },
+  completionTask: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  completionCheckbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: COLORS.SECONDARY,
+    marginRight: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  completionTaskText: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.9)',
+  },
+  
+  trendingTagsContainer: {
+    marginVertical: 16,
+  },
+  trendingTagItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
-  tipIcon: {
+  trendingTagInfo: {
+    flex: 1,
+  },
+  trendingTagName: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: COLORS.SECONDARY,
+    marginBottom: 2,
+  },
+  trendingTagPopularity: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  trendingIcon: {
+    marginRight: 4,
+  },
+  trendingTagScore: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.7)',
+  },
+  addTagButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 16,
+  },
+  addTagButtonText: {
+    fontSize: 12,
+    color: COLORS.SECONDARY,
+    fontWeight: 'bold',
+  },
+  
+  topPhotoContainer: {
+    marginVertical: 16,
+    position: 'relative',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  topPhoto: {
+    width: '100%',
+    height: 300,
+    borderRadius: 12,
+  },
+  topPhotoOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    padding: 12,
+    alignItems: 'center',
+  },
+  topPhotoText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: COLORS.SECONDARY,
+  },
+  setAsProfileButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  setAsProfileButtonText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: COLORS.SECONDARY,
+  },
+  
+  vibeContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginVertical: 16,
+  },
+  vibeTag: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 20,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  vibeTagText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: COLORS.SECONDARY,
+  },
+  vibeDescription: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  
+  boostCard: {
+    padding: 16,
+    borderRadius: 12,
+  },
+  boostHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  boostTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: COLORS.SECONDARY,
+    marginLeft: 8,
+  },
+  boostDescription: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginBottom: 16,
+  },
+  boostDetails: {
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  boostDetail: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  boostDetailText: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginLeft: 6,
+  },
+  boostButton: {
+    backgroundColor: COLORS.SECONDARY,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  boostButtonText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: COLORS.PRIMARY,
+    marginRight: 6,
+  },
+  
+  shareInsightsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.SECONDARY,
+    margin: 16,
+    marginTop: 0,
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 32,
+  },
+  shareInsightsButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: COLORS.PRIMARY,
+    marginLeft: 8,
+  },
+  
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  shareableCard: {
+    backgroundColor: COLORS.PRIMARY,
+    borderRadius: 16,
+    padding: 16,
+    width: '100%',
+    maxWidth: 320,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  shareableCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  shareableCardTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: COLORS.SECONDARY,
+  },
+  closeButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
   },
-  tipContent: {
-    flex: 1,
+  shareableCardContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 24,
   },
-  tipTitle: {
-    fontSize: 14,
+  shareableStat: {
+    alignItems: 'center',
+  },
+  shareableStatValue: {
+    fontSize: 24,
     fontWeight: 'bold',
     color: COLORS.SECONDARY,
-    marginBottom: 2,
+    marginTop: 8,
+    marginBottom: 4,
   },
-  tipDescription: {
+  shareableStatLabel: {
     fontSize: 12,
     color: 'rgba(255, 255, 255, 0.7)',
   },
-  tipAction: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 16,
-    marginLeft: 8,
+  shareButton: {
+    backgroundColor: COLORS.SECONDARY,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginBottom: 16,
   },
-  tipActionText: {
-    fontSize: 12,
-    color: COLORS.SECONDARY,
+  shareButtonText: {
+    fontSize: 14,
     fontWeight: 'bold',
+    color: COLORS.PRIMARY,
+    marginRight: 6,
+  },
+  shareableCardFooter: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.5)',
+    textAlign: 'center',
+  },
+  
+  photoModalCard: {
+    backgroundColor: COLORS.PRIMARY,
+    borderRadius: 16,
+    padding: 16,
+    width: '100%',
+    maxWidth: 350,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  photoModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  photoModalTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: COLORS.SECONDARY,
+  },
+  fullSizePhoto: {
+    width: '100%',
+    height: 350,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  photoModalStats: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.9)',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  setAsDefaultButton: {
+    backgroundColor: COLORS.SECONDARY,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  setAsDefaultButtonText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: COLORS.PRIMARY,
   },
 });
 
