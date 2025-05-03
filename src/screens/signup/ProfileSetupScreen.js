@@ -22,6 +22,7 @@ const ProfileSetupScreen = ({ onBack, onComplete }) => {
   const { formData, updateFormData, prevStep, submitForm, resetForm } = useSignup();
   
   const [profilePicture, setProfilePicture] = useState(formData.profilePicture || null);
+  const [governmentId, setGovernmentId] = useState(formData.governmentId || null);
   const [bio, setBio] = useState(formData.bio || '');
   const [prompts, setPrompts] = useState(formData.prompts || [
     { question: '', answer: '' },
@@ -108,6 +109,10 @@ const ProfileSetupScreen = ({ onBack, onComplete }) => {
       newErrors.profilePicture = 'Profile picture is required';
     }
     
+    if (!governmentId) {
+      newErrors.governmentId = 'Government ID is required';
+    }
+    
     if (!bio.trim()) {
       newErrors.bio = 'Bio is required';
     } else if (bio.length > 200) {
@@ -125,6 +130,7 @@ const ProfileSetupScreen = ({ onBack, onComplete }) => {
       try {
         updateFormData({
           profilePicture,
+          governmentId,
           bio,
           prompts,
         });
@@ -161,12 +167,60 @@ const ProfileSetupScreen = ({ onBack, onComplete }) => {
   const handleBack = () => {
     updateFormData({
       profilePicture,
+      governmentId,
       bio,
       prompts,
     });
     prevStep();
     if (onBack) {
       onBack();
+    }
+  };
+  
+  const pickGovernmentId = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (status !== 'granted') {
+        alert('Sorry, we need camera roll permissions to upload your ID.');
+        return;
+      }
+      
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+      
+      if (!result.canceled) {
+        setGovernmentId(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+    }
+  };
+
+  const takeGovernmentIdPhoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      
+      if (status !== 'granted') {
+        alert('Sorry, we need camera permissions to take a photo of your ID.');
+        return;
+      }
+      
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+      
+      if (!result.canceled) {
+        setGovernmentId(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
     }
   };
   
@@ -220,6 +274,44 @@ const ProfileSetupScreen = ({ onBack, onComplete }) => {
             </View>
             {errors.profilePicture && (
               <Text style={styles.errorText}>{errors.profilePicture}</Text>
+            )}
+          </View>
+          
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Government ID</Text>
+            <View style={styles.idUploadContainer}>
+              {governmentId ? (
+                <View style={styles.idPreviewContainer}>
+                  <Image source={{ uri: governmentId }} style={styles.idPreview} />
+                  <TouchableOpacity
+                    style={styles.changeIdButton}
+                    onPress={pickGovernmentId}
+                  >
+                    <MaterialIcons name="edit" size={20} color={COLORS.SECONDARY} />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={styles.idUploadButtons}>
+                  <TouchableOpacity
+                    style={styles.uploadButton}
+                    onPress={pickGovernmentId}
+                  >
+                    <FontAwesome name="image" size={20} color={COLORS.SECONDARY} />
+                    <Text style={styles.uploadButtonText}>Gallery</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity
+                    style={styles.uploadButton}
+                    onPress={takeGovernmentIdPhoto}
+                  >
+                    <FontAwesome name="camera" size={20} color={COLORS.SECONDARY} />
+                    <Text style={styles.uploadButtonText}>Camera</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+            {errors.governmentId && (
+              <Text style={styles.errorText}>{errors.governmentId}</Text>
             )}
           </View>
           
@@ -363,6 +455,39 @@ const styles = StyleSheet.create({
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  idUploadContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  idPreviewContainer: {
+    position: 'relative',
+  },
+  idPreview: {
+    width: 200,
+    height: 150,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: COLORS.SECONDARY,
+  },
+  changeIdButton: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    backgroundColor: COLORS.PRIMARY,
+    borderWidth: 1,
+    borderColor: COLORS.SECONDARY,
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  idUploadButtons: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    width: '100%',
   },
   profileUploadButtons: {
     flexDirection: 'row',

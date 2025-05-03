@@ -7,14 +7,13 @@ import {
   TouchableOpacity,
   ScrollView,
   Platform,
-  Image,
   SafeAreaView,
   KeyboardAvoidingView,
+  Modal,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import * as ImagePicker from 'expo-image-picker';
-import { FontAwesome, MaterialIcons } from '@expo/vector-icons';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useSignup } from '../../context/SignupContext';
 import ProgressBar from '../../components/signup/ProgressBar';
 import { COLORS } from '../../styles/theme';
@@ -26,9 +25,9 @@ const PersonalInfoScreen = ({ phoneNumber }) => {
   const [dateOfBirth, setDateOfBirth] = useState(formData.dateOfBirth ? new Date(formData.dateOfBirth) : new Date());
   const [gender, setGender] = useState(formData.gender || '');
   const [location, setLocation] = useState(formData.location || { city: '', state: '', country: '' });
-  const [governmentId, setGovernmentId] = useState(formData.governmentId || null);
   
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showDatePickerModal, setShowDatePickerModal] = useState(false);
   const [errors, setErrors] = useState({});
   
   useEffect(() => {
@@ -46,55 +45,22 @@ const PersonalInfoScreen = ({ phoneNumber }) => {
   };
 
   const handleDateChange = (event, selectedDate) => {
-    const currentDate = selectedDate || dateOfBirth;
-    setShowDatePicker(Platform.OS === 'ios');
-    setDateOfBirth(currentDate);
-  };
-
-  const pickImage = async () => {
-    try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      
-      if (status !== 'granted') {
-        alert('Sorry, we need camera roll permissions to upload your ID.');
-        return;
-      }
-      
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.8,
-      });
-      
-      if (!result.canceled) {
-        setGovernmentId(result.assets[0].uri);
-      }
-    } catch (error) {
-      console.error('Error picking image:', error);
+    if (selectedDate) {
+      setDateOfBirth(selectedDate);
     }
+    
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+    
+    setShowDatePickerModal(false);
   };
 
-  const takePhoto = async () => {
-    try {
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      
-      if (status !== 'granted') {
-        alert('Sorry, we need camera permissions to take a photo of your ID.');
-        return;
-      }
-      
-      const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.8,
-      });
-      
-      if (!result.canceled) {
-        setGovernmentId(result.assets[0].uri);
-      }
-    } catch (error) {
-      console.error('Error taking photo:', error);
+  const openDatePicker = () => {
+    if (Platform.OS === 'ios' || Platform.OS === 'android') {
+      setShowDatePicker(true);
+    } else {
+      setShowDatePickerModal(true);
     }
   };
 
@@ -128,7 +94,6 @@ const PersonalInfoScreen = ({ phoneNumber }) => {
         dateOfBirth: dateOfBirth.toISOString(),
         gender,
         location,
-        governmentId,
       });
       nextStep();
     }
@@ -171,14 +136,16 @@ const PersonalInfoScreen = ({ phoneNumber }) => {
               <Text style={styles.label}>Date of Birth</Text>
               <TouchableOpacity
                 style={[styles.input, styles.dateInput, errors.dateOfBirth && styles.inputError]}
-                onPress={() => setShowDatePicker(true)}
+                onPress={openDatePicker}
               >
                 <Text style={styles.dateText}>
                   {formatDate(dateOfBirth)}
                 </Text>
                 <MaterialIcons name="date-range" size={20} color={COLORS.SECONDARY} />
               </TouchableOpacity>
-              {showDatePicker && (
+              
+              {/* Date picker for iOS and Android */}
+              {showDatePicker && (Platform.OS === 'ios' || Platform.OS === 'android') && (
                 <DateTimePicker
                   value={dateOfBirth}
                   mode="date"
@@ -186,6 +153,43 @@ const PersonalInfoScreen = ({ phoneNumber }) => {
                   onChange={handleDateChange}
                   maximumDate={new Date()}
                 />
+              )}
+              
+              {/* Modal date picker for web */}
+              {showDatePickerModal && (
+                <Modal
+                  visible={showDatePickerModal}
+                  transparent={true}
+                  animationType="fade"
+                >
+                  <View style={styles.modalContainer}>
+                    <View style={styles.modalContent}>
+                      <Text style={styles.modalTitle}>Select Date of Birth</Text>
+                      <DateTimePicker
+                        value={dateOfBirth}
+                        mode="date"
+                        display="default"
+                        onChange={handleDateChange}
+                        maximumDate={new Date()}
+                        textColor={COLORS.PRIMARY}
+                      />
+                      <View style={styles.modalButtons}>
+                        <TouchableOpacity
+                          style={styles.modalButton}
+                          onPress={() => setShowDatePickerModal(false)}
+                        >
+                          <Text style={styles.modalButtonText}>Cancel</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.modalButton, styles.modalButtonConfirm]}
+                          onPress={() => setShowDatePickerModal(false)}
+                        >
+                          <Text style={styles.modalButtonConfirmText}>Confirm</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </View>
+                </Modal>
               )}
               {errors.dateOfBirth && (
                 <Text style={styles.errorText}>{errors.dateOfBirth}</Text>
@@ -279,40 +283,7 @@ const PersonalInfoScreen = ({ phoneNumber }) => {
               />
             </View>
             
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Government ID</Text>
-              <View style={styles.idUploadContainer}>
-                {governmentId ? (
-                  <View style={styles.idPreviewContainer}>
-                    <Image source={{ uri: governmentId }} style={styles.idPreview} />
-                    <TouchableOpacity
-                      style={styles.removeIdButton}
-                      onPress={() => setGovernmentId(null)}
-                    >
-                      <FontAwesome name="times-circle" size={24} color={COLORS.ERROR} />
-                    </TouchableOpacity>
-                  </View>
-                ) : (
-                  <View style={styles.idUploadButtons}>
-                    <TouchableOpacity
-                      style={styles.uploadButton}
-                      onPress={pickImage}
-                    >
-                      <FontAwesome name="image" size={20} color={COLORS.SECONDARY} />
-                      <Text style={styles.uploadButtonText}>Gallery</Text>
-                    </TouchableOpacity>
-                    
-                    <TouchableOpacity
-                      style={styles.uploadButton}
-                      onPress={takePhoto}
-                    >
-                      <FontAwesome name="camera" size={20} color={COLORS.SECONDARY} />
-                      <Text style={styles.uploadButtonText}>Camera</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </View>
-            </View>
+
           </View>
           
           <View style={styles.buttonContainer}>
@@ -423,53 +394,49 @@ const styles = StyleSheet.create({
   disabledInput: {
     opacity: 0.7,
   },
-  idUploadContainer: {
-    borderWidth: 1,
-    borderColor: COLORS.SECONDARY,
-    borderRadius: 8,
-    borderStyle: 'dashed',
-    padding: 16,
-    alignItems: 'center',
+  modalContainer: {
+    flex: 1,
     justifyContent: 'center',
-    minHeight: 120,
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
   },
-  idUploadButtons: {
+  modalContent: {
+    backgroundColor: COLORS.SECONDARY,
+    borderRadius: 12,
+    padding: 20,
+    width: '80%',
+    maxWidth: 400,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: COLORS.PRIMARY,
+    marginBottom: 20,
+  },
+  modalButtons: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
     width: '100%',
+    marginTop: 20,
   },
-  uploadButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+  modalButton: {
     padding: 12,
-    borderWidth: 1,
-    borderColor: COLORS.SECONDARY,
     borderRadius: 8,
-    width: '45%',
+    alignItems: 'center',
+    flex: 1,
+    marginHorizontal: 5,
   },
-  uploadButtonText: {
+  modalButtonText: {
+    color: COLORS.PRIMARY,
+    fontSize: 16,
+  },
+  modalButtonConfirm: {
+    backgroundColor: COLORS.PRIMARY,
+  },
+  modalButtonConfirmText: {
     color: COLORS.SECONDARY,
-    marginLeft: 8,
-    fontSize: 14,
-  },
-  idPreviewContainer: {
-    width: '100%',
-    position: 'relative',
-  },
-  idPreview: {
-    width: '100%',
-    height: 200,
-    borderRadius: 8,
-    resizeMode: 'cover',
-  },
-  removeIdButton: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    borderRadius: 15,
-    padding: 4,
+    fontWeight: 'bold',
   },
   buttonContainer: {
     marginTop: 24,
