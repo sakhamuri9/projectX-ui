@@ -50,12 +50,9 @@ export default function App() {
   };
 
   const handleSignupComplete = (intent) => {
+    console.log('Signup complete with intent:', intent);
     setRelationshipIntent(intent);
-    if (intent === 'Dating' || intent === 'Both') {
-      setCurrentScreen('dashboard');
-    } else {
-      setCurrentScreen('splash');
-    }
+    setCurrentScreen('dashboard');
   };
 
   const renderScreen = () => {

@@ -106,7 +106,6 @@ const ProfileSetupScreen = ({ onBack, onComplete }) => {
   const validateForm = () => {
     const newErrors = {};
     
-    
     if (!bio.trim()) {
       newErrors.bio = 'Bio is required';
     } else if (bio.length > 200) {
@@ -131,6 +130,12 @@ const ProfileSetupScreen = ({ onBack, onComplete }) => {
         
         const result = await submitForm();
         
+        console.log('Profile created successfully with relationship intent:', relationshipIntent);
+        
+        if (onComplete) {
+          onComplete(relationshipIntent);
+        }
+        
         Alert.alert(
           'Profile Created',
           'Your profile has been created successfully!',
@@ -139,9 +144,6 @@ const ProfileSetupScreen = ({ onBack, onComplete }) => {
               text: 'OK',
               onPress: () => {
                 resetForm();
-                if (onComplete) {
-                  onComplete(relationshipIntent);
-                }
               },
             },
           ]
