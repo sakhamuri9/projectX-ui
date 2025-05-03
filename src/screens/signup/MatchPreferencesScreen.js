@@ -88,7 +88,7 @@ const MatchPreferencesScreen = (props) => {
         setLoading(false);
         nextStep();
         if (props.onComplete) {
-          props.onComplete();
+          props.onComplete(relationshipIntent);
         }
       }, 500);
     }

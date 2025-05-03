@@ -9,6 +9,7 @@ import VerificationScreen from './src/screens/signup/VerificationScreen';
 import PersonalInfoScreen from './src/screens/signup/PersonalInfoScreen';
 import MatchPreferencesScreen from './src/screens/signup/MatchPreferencesScreen';
 import ProfileSetupScreen from './src/screens/signup/ProfileSetupScreen';
+import DashboardScreen from './src/screens/dashboard/DashboardScreen';
 import { SignupProvider } from './src/context/SignupContext';
 import Toast from 'react-native-toast-message';
 
@@ -18,6 +19,7 @@ export default function App() {
   const [email, setEmail] = useState('');
   const [verifiedPhone, setVerifiedPhone] = useState(false);
   const [verifiedEmail, setVerifiedEmail] = useState(false);
+  const [relationshipIntent, setRelationshipIntent] = useState('');
 
   const handleSignIn = () => {
     setCurrentScreen('login');
@@ -47,8 +49,13 @@ export default function App() {
     }
   };
 
-  const handleSignupComplete = () => {
-    setCurrentScreen('splash');
+  const handleSignupComplete = (intent) => {
+    setRelationshipIntent(intent);
+    if (intent === 'Dating' || intent === 'Both') {
+      setCurrentScreen('dashboard');
+    } else {
+      setCurrentScreen('splash');
+    }
   };
 
   const renderScreen = () => {
@@ -120,6 +127,9 @@ export default function App() {
             />
           </SignupProvider>
         );
+      
+      case 'dashboard':
+        return <DashboardScreen relationshipIntent={relationshipIntent} />;
       
       default:
         return <SplashScreen onSignIn={handleSignIn} onSignUp={handleSignUp} />;
