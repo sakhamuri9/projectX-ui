@@ -106,13 +106,6 @@ const ProfileSetupScreen = ({ onBack, onComplete }) => {
   const validateForm = () => {
     const newErrors = {};
     
-    if (!profilePicture) {
-      newErrors.profilePicture = 'Profile picture is required';
-    }
-    
-    if (!governmentId) {
-      newErrors.governmentId = 'Government ID is required';
-    }
     
     if (!bio.trim()) {
       newErrors.bio = 'Bio is required';
