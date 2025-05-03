@@ -16,6 +16,7 @@ import { COLORS } from '../../../styles/theme';
 const { width, height } = Dimensions.get('window');
 const CARD_WIDTH = Math.min(width * 0.85, 400);
 const CARD_HEIGHT = Math.min(height * 0.6, CARD_WIDTH * 1.5);
+const CARD_STACK_OFFSET = 8; // Offset for stacked cards
 
 const MatchesTab = () => {
   const [likeCount, setLikeCount] = useState(0);
@@ -25,6 +26,20 @@ const MatchesTab = () => {
   const [showDislikeOverlay, setShowDislikeOverlay] = useState(false);
   
   const position = useRef(new Animated.ValueXY()).current;
+  const cardScales = useRef([
+    new Animated.Value(1),      // Top card
+    new Animated.Value(0.95),   // Second card
+    new Animated.Value(0.90),   // Third card
+    new Animated.Value(0.85),   // Fourth card
+  ]).current;
+  
+  const cardOffsets = useRef([
+    new Animated.Value(0),                  // Top card
+    new Animated.Value(-CARD_STACK_OFFSET), // Second card
+    new Animated.Value(-CARD_STACK_OFFSET * 2), // Third card
+    new Animated.Value(-CARD_STACK_OFFSET * 3), // Fourth card
+  ]).current;
+  
   const rotation = position.x.interpolate({
     inputRange: [-width / 2, 0, width / 2],
     outputRange: ['8deg', '0deg', '-8deg'],
@@ -33,33 +48,55 @@ const MatchesTab = () => {
   
   const likeOpacity = position.x.interpolate({
     inputRange: [-width / 4, 0, width / 4],
-    outputRange: [1, 0, 0],
+    outputRange: [0, 0, 1],
     extrapolate: 'clamp',
   });
   
   const dislikeOpacity = position.x.interpolate({
     inputRange: [-width / 4, 0, width / 4],
-    outputRange: [0, 0, 1],
+    outputRange: [1, 0, 0],
     extrapolate: 'clamp',
   });
   
-  const nextCardOpacity = position.x.interpolate({
-    inputRange: [-width / 2, 0, width / 2],
-    outputRange: [1, 0.8, 1],
-    extrapolate: 'clamp',
-  });
+  useEffect(() => {
+    initializeCardPositions();
+  }, []);
   
-  const nextCardScale = position.x.interpolate({
-    inputRange: [-width / 2, 0, width / 2],
-    outputRange: [1, 0.9, 1],
-    extrapolate: 'clamp',
-  });
+  useEffect(() => {
+    initializeCardPositions();
+  }, [currentIndex]);
+  
+  const initializeCardPositions = () => {
+    position.setValue({ x: 0, y: 0 });
+    
+    cardScales.forEach((scale, i) => {
+      scale.setValue(1 - (i * 0.05));
+    });
+    
+    cardOffsets.forEach((offset, i) => {
+      offset.setValue(-CARD_STACK_OFFSET * i);
+    });
+  };
   
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onPanResponderMove: (_, gesture) => {
         position.setValue({ x: gesture.dx, y: gesture.dy });
+        
+        const swipeThreshold = width * 0.25;
+        const dragDistance = Math.abs(gesture.dx);
+        const percentDragged = Math.min(dragDistance / swipeThreshold, 1);
+        
+        cardScales.forEach((scale, i) => {
+          if (i > 0) { // Only animate cards below the top card
+            const nextScale = (1 - (i * 0.05)) + (0.05 * percentDragged);
+            scale.setValue(nextScale);
+            
+            const nextOffset = -CARD_STACK_OFFSET * (i - percentDragged * 0.5);
+            cardOffsets[i].setValue(nextOffset);
+          }
+        });
       },
       onPanResponderRelease: (_, gesture) => {
         if (gesture.dx > 120) {
@@ -67,31 +104,55 @@ const MatchesTab = () => {
         } else if (gesture.dx < -120) {
           swipeLeft();
         } else {
-          Animated.spring(position, {
-            toValue: { x: 0, y: 0 },
-            friction: 5,
-            useNativeDriver: false,
-          }).start();
+          resetCardPositions();
         }
       },
     })
   ).current;
+  
+  const resetCardPositions = () => {
+    Animated.parallel([
+      Animated.spring(position, {
+        toValue: { x: 0, y: 0 },
+        friction: 5,
+        useNativeDriver: false,
+      }),
+      ...cardScales.map((scale, i) => 
+        Animated.spring(scale, {
+          toValue: 1 - (i * 0.05),
+          friction: 5,
+          useNativeDriver: false,
+        })
+      ),
+      ...cardOffsets.map((offset, i) => 
+        Animated.spring(offset, {
+          toValue: -CARD_STACK_OFFSET * i,
+          friction: 5,
+          useNativeDriver: false,
+        })
+      )
+    ]).start();
+  };
   
   const swipeLeft = () => {
     setShowLikeOverlay(true);
     setLikeCount(prevCount => prevCount + 1);
     
     Animated.timing(position, {
-      toValue: { x: -width, y: 0 },
+      toValue: { x: -width * 1.5, y: 0 },
       duration: 300,
       useNativeDriver: false,
     }).start(() => {
       setCurrentIndex(prevIndex => 
         prevIndex === matches.length - 1 ? 0 : prevIndex + 1
       );
+      
       position.setValue({ x: 0, y: 0 });
+      
       setTimeout(() => setShowLikeOverlay(false), 500);
     });
+    
+    animateCardsUp();
   };
   
   const swipeRight = () => {
@@ -99,18 +160,46 @@ const MatchesTab = () => {
     setDislikeCount(prevCount => prevCount + 1);
     
     Animated.timing(position, {
-      toValue: { x: width, y: 0 },
+      toValue: { x: width * 1.5, y: 0 },
       duration: 300,
       useNativeDriver: false,
     }).start(() => {
       setCurrentIndex(prevIndex => 
         prevIndex === matches.length - 1 ? 0 : prevIndex + 1
       );
+      
       position.setValue({ x: 0, y: 0 });
+      
       setTimeout(() => setShowDislikeOverlay(false), 500);
     });
+    
+    animateCardsUp();
   };
   
+  const animateCardsUp = () => {
+    const animations = [];
+    
+    for (let i = 1; i < cardScales.length; i++) {
+      animations.push(
+        Animated.timing(cardScales[i], {
+          toValue: i === 1 ? 1 : 1 - ((i-1) * 0.05),
+          duration: 300,
+          useNativeDriver: false,
+        })
+      );
+      
+      animations.push(
+        Animated.timing(cardOffsets[i], {
+          toValue: i === 1 ? 0 : -CARD_STACK_OFFSET * (i-1),
+          duration: 300,
+          useNativeDriver: false,
+        })
+      );
+    }
+    
+    Animated.parallel(animations).start();
+  };
+
   const matches = [
     {
       id: 1,
@@ -158,40 +247,67 @@ const MatchesTab = () => {
     },
   ];
 
-  const scrollX = new Animated.Value(0);
-
-  const renderMatchCard = (match, index) => {
-    const inputRange = [
-      (index - 1) * CARD_WIDTH,
-      index * CARD_WIDTH,
-      (index + 1) * CARD_WIDTH,
-    ];
+  const renderCard = (index) => {
+    const matchIndex = (currentIndex + index) % matches.length;
+    const match = matches[matchIndex];
     
-    const scale = scrollX.interpolate({
-      inputRange,
-      outputRange: [0.9, 1, 0.9],
-      extrapolate: 'clamp',
-    });
+    if (index > 3) return null;
     
-    const opacity = scrollX.interpolate({
-      inputRange,
-      outputRange: [0.7, 1, 0.7],
-      extrapolate: 'clamp',
-    });
+    const isTopCard = index === 0;
+    
+    const cardStyle = {
+      zIndex: matches.length - index,
+      opacity: 1,
+      transform: [
+        { scale: cardScales[index] },
+        { translateY: cardOffsets[index] }
+      ],
+    };
+    
+    // Add swipe animations only to the top card
+    if (isTopCard) {
+      cardStyle.transform.push(
+        { translateX: position.x },
+        { translateY: position.y },
+        { rotate: rotation }
+      );
+    }
     
     return (
-      <Animated.View 
-        key={match.id}
-        style={[
-          styles.matchCard,
-          { 
-            transform: [{ scale }],
-            opacity,
-          }
-        ]}
+      <Animated.View
+        key={`card-${matchIndex}`}
+        {...(isTopCard ? panResponder.panHandlers : {})}
+        style={[styles.card, cardStyle]}
       >
         <View style={styles.matchImageContainer}>
           <Image source={{ uri: match.image }} style={styles.matchImage} />
+          
+          {/* Like Stamp Overlay - only on top card */}
+          {isTopCard && (
+            <Animated.View 
+              style={[
+                styles.stampOverlay, 
+                styles.likeStamp,
+                { opacity: likeOpacity }
+              ]}
+            >
+              <Text style={styles.stampText}>LIKE</Text>
+            </Animated.View>
+          )}
+          
+          {/* Dislike Stamp Overlay - only on top card */}
+          {isTopCard && (
+            <Animated.View 
+              style={[
+                styles.stampOverlay, 
+                styles.dislikeStamp,
+                { opacity: dislikeOpacity }
+              ]}
+            >
+              <Text style={styles.stampText}>NOPE</Text>
+            </Animated.View>
+          )}
+          
           <View style={styles.matchPercentageContainer}>
             <Text style={styles.matchPercentage}>{match.matchPercentage}%</Text>
             <Text style={styles.matchText}>Match</Text>
@@ -201,9 +317,11 @@ const MatchesTab = () => {
         <View style={styles.matchInfo}>
           <View style={styles.matchNameRow}>
             <Text style={styles.matchName}>{match.name}, {match.age}</Text>
-            <TouchableOpacity style={styles.likeButton}>
-              <Ionicons name="heart" size={24} color="#FF3B30" />
-            </TouchableOpacity>
+            {isTopCard && (
+              <TouchableOpacity style={styles.likeButton} onPress={swipeLeft}>
+                <Ionicons name="heart" size={24} color="#FF3B30" />
+              </TouchableOpacity>
+            )}
           </View>
           
           <View style={styles.matchLocationRow}>
@@ -213,148 +331,32 @@ const MatchesTab = () => {
           
           <Text style={styles.matchDistance}>{match.distance}</Text>
           
-          <Text style={styles.matchBio} numberOfLines={2}>{match.bio}</Text>
-          
-          <View style={styles.interestsContainer}>
-            {match.interests.map((interest, i) => (
-              <View key={i} style={styles.interestTag}>
-                <Text style={styles.interestText}>{interest}</Text>
+          {/* Only show bio and interests on the top card to reduce clutter */}
+          {isTopCard && (
+            <>
+              <Text style={styles.matchBio} numberOfLines={2}>{match.bio}</Text>
+              
+              <View style={styles.interestsContainer}>
+                {match.interests.map((interest, i) => (
+                  <View key={i} style={styles.interestTag}>
+                    <Text style={styles.interestText}>{interest}</Text>
+                  </View>
+                ))}
               </View>
-            ))}
-          </View>
-          
-          <View style={styles.cardActions}>
-            <TouchableOpacity style={styles.cardActionButton}>
-              <MaterialCommunityIcons name="message-text-outline" size={20} color={COLORS.SECONDARY} />
-              <Text style={styles.cardActionText}>Message</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.cardActionButton}>
-              <Ionicons name="person-outline" size={20} color={COLORS.SECONDARY} />
-              <Text style={styles.cardActionText}>Profile</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Animated.View>
-    );
-  };
-
-  const renderSwipeableCard = () => {
-    const match = matches[currentIndex];
-    
-    return (
-      <Animated.View
-        {...panResponder.panHandlers}
-        style={[
-          styles.swipeableCard,
-          {
-            transform: [
-              { translateX: position.x },
-              { translateY: position.y },
-              { rotate: rotation }
-            ]
-          }
-        ]}
-      >
-        <View style={styles.matchImageContainer}>
-          <Image source={{ uri: match.image }} style={styles.matchImage} />
-          
-          {/* Like Stamp Overlay */}
-          <Animated.View 
-            style={[
-              styles.stampOverlay, 
-              styles.likeStamp,
-              { opacity: likeOpacity }
-            ]}
-          >
-            <Text style={styles.stampText}>LIKE</Text>
-          </Animated.View>
-          
-          {/* Dislike Stamp Overlay */}
-          <Animated.View 
-            style={[
-              styles.stampOverlay, 
-              styles.dislikeStamp,
-              { opacity: dislikeOpacity }
-            ]}
-          >
-            <Text style={styles.stampText}>NOPE</Text>
-          </Animated.View>
-          
-          <View style={styles.matchPercentageContainer}>
-            <Text style={styles.matchPercentage}>{match.matchPercentage}%</Text>
-            <Text style={styles.matchText}>Match</Text>
-          </View>
-        </View>
-        
-        <View style={styles.matchInfo}>
-          <View style={styles.matchNameRow}>
-            <Text style={styles.matchName}>{match.name}, {match.age}</Text>
-            <TouchableOpacity style={styles.likeButton} onPress={swipeLeft}>
-              <Ionicons name="heart" size={24} color="#FF3B30" />
-            </TouchableOpacity>
-          </View>
-          
-          <View style={styles.matchLocationRow}>
-            <Ionicons name="location-outline" size={16} color="rgba(255, 255, 255, 0.7)" />
-            <Text style={styles.matchLocation}>{match.location}</Text>
-          </View>
-          
-          <Text style={styles.matchDistance}>{match.distance}</Text>
-          
-          <Text style={styles.matchBio} numberOfLines={2}>{match.bio}</Text>
-          
-          <View style={styles.interestsContainer}>
-            {match.interests.map((interest, i) => (
-              <View key={i} style={styles.interestTag}>
-                <Text style={styles.interestText}>{interest}</Text>
+              
+              <View style={styles.cardActions}>
+                <TouchableOpacity style={styles.cardActionButton} onPress={swipeRight}>
+                  <Ionicons name="close-circle" size={20} color="#FF3B30" />
+                  <Text style={styles.cardActionText}>Pass</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity style={styles.cardActionButton} onPress={swipeLeft}>
+                  <Ionicons name="heart" size={20} color="#34C759" />
+                  <Text style={styles.cardActionText}>Like</Text>
+                </TouchableOpacity>
               </View>
-            ))}
-          </View>
-          
-          <View style={styles.cardActions}>
-            <TouchableOpacity style={styles.cardActionButton} onPress={swipeRight}>
-              <Ionicons name="close-circle" size={20} color="#FF3B30" />
-              <Text style={styles.cardActionText}>Pass</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.cardActionButton} onPress={swipeLeft}>
-              <Ionicons name="heart" size={20} color="#34C759" />
-              <Text style={styles.cardActionText}>Like</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Animated.View>
-    );
-  };
-  
-  const renderNextCard = () => {
-    const nextIndex = currentIndex === matches.length - 1 ? 0 : currentIndex + 1;
-    const match = matches[nextIndex];
-    
-    return (
-      <Animated.View
-        style={[
-          styles.swipeableCard,
-          styles.nextCard,
-          {
-            transform: [{ scale: nextCardScale }],
-            opacity: nextCardOpacity,
-          }
-        ]}
-      >
-        <View style={styles.matchImageContainer}>
-          <Image source={{ uri: match.image }} style={styles.matchImage} />
-          <View style={styles.matchPercentageContainer}>
-            <Text style={styles.matchPercentage}>{match.matchPercentage}%</Text>
-            <Text style={styles.matchText}>Match</Text>
-          </View>
-        </View>
-        
-        <View style={styles.matchInfo}>
-          <View style={styles.matchNameRow}>
-            <Text style={styles.matchName}>{match.name}, {match.age}</Text>
-          </View>
+            </>
+          )}
         </View>
       </Animated.View>
     );
@@ -396,9 +398,10 @@ const MatchesTab = () => {
         </View>
       </View>
       
+      {/* Card Stack */}
       <View style={styles.cardsContainer}>
-        {renderNextCard()}
-        {renderSwipeableCard()}
+        {/* Render cards in reverse order so the first card is on top */}
+        {[3, 2, 1, 0].map(index => renderCard(index))}
       </View>
       
       <View style={styles.section}>
@@ -550,8 +553,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginVertical: 20,
     position: 'relative',
+    perspective: 1000,
   },
-  swipeableCard: {
+  card: {
     width: CARD_WIDTH,
     height: CARD_HEIGHT,
     position: 'absolute',
@@ -560,16 +564,12 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
-    elevation: 3,
+    elevation: 5,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 4,
-  },
-  nextCard: {
-    zIndex: 0,
-    transform: [{ scale: 0.95 }],
-    top: 10,
+    shadowRadius: 6,
+    backfaceVisibility: 'hidden',
   },
   stampOverlay: {
     position: 'absolute',
