@@ -14,12 +14,12 @@ import { SignupProvider } from './src/context/SignupContext';
 import Toast from 'react-native-toast-message';
 
 export default function App() {
-  const [currentScreen, setCurrentScreen] = useState('splash');
+  const [currentScreen, setCurrentScreen] = useState('dashboard'); // Temporarily set to dashboard for testing
   const [phoneNumber, setPhoneNumber] = useState('');
   const [email, setEmail] = useState('');
   const [verifiedPhone, setVerifiedPhone] = useState(false);
   const [verifiedEmail, setVerifiedEmail] = useState(false);
-  const [relationshipIntent, setRelationshipIntent] = useState('');
+  const [relationshipIntent, setRelationshipIntent] = useState('Dating');
 
   const handleSignIn = () => {
     setCurrentScreen('login');
