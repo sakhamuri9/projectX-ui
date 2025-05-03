@@ -155,7 +155,7 @@ const PersonalInfoScreen = ({ phoneNumber }) => {
         >
           <Text style={styles.title}>Create Your Profile</Text>
           
-          <ProgressBar currentStep={1} totalSteps={3} />
+          <ProgressBar currentStep={3} totalSteps={5} />
           
           <View style={styles.formSection}>
             <Text style={styles.sectionTitle}>Personal Information</Text>

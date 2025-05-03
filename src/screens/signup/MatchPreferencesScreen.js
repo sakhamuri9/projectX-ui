@@ -114,7 +114,7 @@ const MatchPreferencesScreen = () => {
       >
         <Text style={styles.title}>Create Your Profile</Text>
         
-        <ProgressBar currentStep={2} totalSteps={3} />
+        <ProgressBar currentStep={4} totalSteps={5} />
         
         <View style={styles.formSection}>
           <Text style={styles.sectionTitle}>Match Preferences</Text>

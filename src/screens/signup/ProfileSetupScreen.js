@@ -234,7 +234,7 @@ const ProfileSetupScreen = ({ onBack, onComplete }) => {
       >
         <Text style={styles.title}>Create Your Profile</Text>
         
-        <ProgressBar currentStep={3} totalSteps={3} />
+        <ProgressBar currentStep={5} totalSteps={5} />
         
         <View style={styles.formSection}>
           <Text style={styles.sectionTitle}>Profile Setup</Text>
