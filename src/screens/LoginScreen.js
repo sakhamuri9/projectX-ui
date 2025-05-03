@@ -62,7 +62,7 @@ const LoginScreen = () => {
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
       <View style={styles.contentContainer}>
-        <Text style={styles.title}>SoulNext</Text>
+        <Text style={styles.title}>SoulNest</Text>
         <Text style={styles.subtitle}>Sign in with your phone number</Text>
         
         <View style={styles.inputContainer}>
