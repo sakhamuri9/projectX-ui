@@ -25,8 +25,12 @@ const ProgressBar = ({ currentStep, totalSteps }) => {
             </View>
             <Text style={styles.stepLabel}>
               {index === 0
-                ? 'Personal Info'
+                ? 'Contact Details'
                 : index === 1
+                ? 'Verification'
+                : index === 2
+                ? 'Personal Info'
+                : index === 3
                 ? 'Preferences'
                 : 'Profile Setup'}
             </Text>
