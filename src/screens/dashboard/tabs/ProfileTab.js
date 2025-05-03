@@ -18,11 +18,82 @@ const ProfileTab = () => {
   const [tempBio, setTempBio] = useState(bio);
   
   const [profileImage, setProfileImage] = useState('https://randomuser.me/api/portraits/men/32.jpg');
+  const [processedProfileImage, setProcessedProfileImage] = useState(null);
   const [photoGallery, setPhotoGallery] = useState([
     'https://randomuser.me/api/portraits/men/32.jpg',
     'https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0',
     'https://images.unsplash.com/photo-1568602471122-7832951cc4c5'
   ]);
+  const [processedGallery, setProcessedGallery] = useState([]);
+  
+  useEffect(() => {
+    const convertProfileImage = async () => {
+      try {
+        const result = await ImageManipulator.manipulateAsync(
+          profileImage,
+          [{ resize: { width: 120, height: 120 } }],
+          {
+            format: ImageManipulator.SaveFormat.JPEG,
+            compress: 0.8,
+          }
+        );
+        
+        const grayscaleResult = await ImageManipulator.manipulateAsync(
+          result.uri,
+          [{ grayscale: true }],
+          {
+            format: ImageManipulator.SaveFormat.JPEG,
+            compress: 0.8,
+          }
+        );
+        
+        setProcessedProfileImage(grayscaleResult.uri);
+      } catch (error) {
+        console.error('Error converting profile image to grayscale:', error);
+        setProcessedProfileImage(profileImage);
+      }
+    };
+    
+    const convertGalleryImages = async () => {
+      try {
+        const processed = await Promise.all(
+          photoGallery.map(async (photo) => {
+            try {
+              const result = await ImageManipulator.manipulateAsync(
+                photo,
+                [],
+                {
+                  format: ImageManipulator.SaveFormat.JPEG,
+                  compress: 0.8,
+                }
+              );
+              
+              const grayscaleResult = await ImageManipulator.manipulateAsync(
+                result.uri,
+                [{ grayscale: true }],
+                {
+                  format: ImageManipulator.SaveFormat.JPEG,
+                  compress: 0.8,
+                }
+              );
+              
+              return grayscaleResult.uri;
+            } catch (error) {
+              console.error('Error converting gallery image to grayscale:', error);
+              return photo;
+            }
+          })
+        );
+        setProcessedGallery(processed);
+      } catch (error) {
+        console.error('Error processing gallery images:', error);
+        setProcessedGallery(photoGallery);
+      }
+    };
+    
+    convertProfileImage();
+    convertGalleryImages();
+  }, [profileImage, photoGallery]);
 
   const notifications = [
     {
@@ -63,8 +134,8 @@ const ProfileTab = () => {
       <View style={styles.profileHeader}>
         <View style={styles.profileImageContainer}>
           <Image
-            source={{ uri: profileImage }}
-            style={[styles.profileImage, styles.grayscaleImage]}
+            source={{ uri: processedProfileImage || profileImage }}
+            style={styles.profileImage}
           />
           <TouchableOpacity style={styles.editImageButton}>
             <MaterialIcons name="edit" size={20} color={COLORS.PRIMARY} />
@@ -142,11 +213,11 @@ const ProfileTab = () => {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.photosContainer}
         >
-          {photoGallery.map((photo, index) => (
+          {(processedGallery.length > 0 ? processedGallery : photoGallery).map((photo, index) => (
             <Image
               key={index}
               source={{ uri: photo }}
-              style={[styles.photoItem, styles.grayscaleImage]}
+              style={styles.photoItem}
             />
           ))}
           <TouchableOpacity style={styles.addPhotoButton}>
@@ -207,9 +278,6 @@ const ProfileTab = () => {
 };
 
 const styles = StyleSheet.create({
-  grayscaleImage: {
-    filter: 'grayscale(100%)',
-  },
   container: {
     flex: 1,
     backgroundColor: COLORS.PRIMARY,
