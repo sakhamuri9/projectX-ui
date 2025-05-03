@@ -13,9 +13,9 @@ import {
 import { Ionicons, MaterialCommunityIcons, FontAwesome } from '@expo/vector-icons';
 import { COLORS } from '../../../styles/theme';
 
-const { width } = Dimensions.get('window');
-const CARD_WIDTH = width * 0.8;
-const CARD_HEIGHT = CARD_WIDTH * 1.5;
+const { width, height } = Dimensions.get('window');
+const CARD_WIDTH = Math.min(width * 0.85, 400);
+const CARD_HEIGHT = Math.min(height * 0.6, CARD_WIDTH * 1.5);
 
 const MatchesTab = () => {
   const [likeCount, setLikeCount] = useState(0);
@@ -494,17 +494,19 @@ const styles = StyleSheet.create({
   },
   countersContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 40,
-    marginBottom: 10,
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 16,
+    marginTop: 8,
   },
   counterItem: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    marginHorizontal: 10,
   },
   counterText: {
     color: COLORS.SECONDARY,
@@ -514,12 +516,12 @@ const styles = StyleSheet.create({
   },
   swipeIndicatorsContainer: {
     position: 'absolute',
-    top: '50%',
+    top: '40%',
     left: 0,
     right: 0,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 30,
     zIndex: 10,
     pointerEvents: 'none',
   },
@@ -546,20 +548,28 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginVertical: 20,
+    position: 'relative',
   },
   swipeableCard: {
     width: CARD_WIDTH,
     height: CARD_HEIGHT,
     position: 'absolute',
-    borderRadius: 16,
+    borderRadius: 20,
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
   nextCard: {
     zIndex: 0,
+    transform: [{ scale: 0.95 }],
+    top: 10,
   },
   stampOverlay: {
     position: 'absolute',
@@ -615,6 +625,7 @@ const styles = StyleSheet.create({
     padding: 16,
     height: '40%',
     justifyContent: 'space-between',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
   },
   matchNameRow: {
     flexDirection: 'row',
@@ -672,19 +683,19 @@ const styles = StyleSheet.create({
   },
   cardActions: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 8,
+    justifyContent: 'space-around',
+    marginTop: 12,
   },
   cardActionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
     flex: 1,
     justifyContent: 'center',
-    marginHorizontal: 4,
+    marginHorizontal: 8,
   },
   cardActionText: {
     color: COLORS.SECONDARY,
@@ -693,7 +704,8 @@ const styles = StyleSheet.create({
   },
   section: {
     padding: 16,
-    paddingTop: 0,
+    paddingTop: 8,
+    marginTop: 8,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -711,7 +723,8 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.7)',
   },
   newMatchesList: {
-    paddingVertical: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
   },
   newMatchItem: {
     alignItems: 'center',
@@ -744,15 +757,21 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   suggestedList: {
-    paddingVertical: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
   },
   suggestedItem: {
     flexDirection: 'row',
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 12,
-    padding: 12,
-    marginRight: 16,
-    width: 240,
+    borderRadius: 16,
+    padding: 16,
+    marginRight: 20,
+    width: 260,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
   },
   suggestedImage: {
     width: 60,
