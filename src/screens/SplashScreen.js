@@ -5,11 +5,14 @@ import {
   Text,
   SafeAreaView,
   Pressable,
+  Dimensions,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../styles/theme';
 import { FontAwesome } from '@expo/vector-icons';
 import Fireworks from '../components/Fireworks';
+import CloudsAnimation from '../components/CloudsAnimation';
+import LightningAnimation from '../components/LightningAnimation';
 
 const DoveIcon = ({ size = 48, color = 'white' }) => {
   return (
@@ -34,7 +37,9 @@ const SplashScreen = ({ onSignIn, onSignUp }) => {
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
       
-      {/* Fireworks animation */}
+      {/* Atmospheric animations */}
+      <CloudsAnimation />
+      <LightningAnimation />
       {showFireworks && <Fireworks play={showFireworks} />}
       
       {/* Vertical line at the top */}
