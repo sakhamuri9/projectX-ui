@@ -14,7 +14,7 @@ import { SignupProvider } from './src/context/SignupContext';
 import Toast from 'react-native-toast-message';
 
 export default function App() {
-  const [currentScreen, setCurrentScreen] = useState('dashboard'); // Temporarily set to dashboard for testing
+  const [currentScreen, setCurrentScreen] = useState('splash'); // Reset to splash screen for normal flow
   const [phoneNumber, setPhoneNumber] = useState('');
   const [email, setEmail] = useState('');
   const [verifiedPhone, setVerifiedPhone] = useState(false);
