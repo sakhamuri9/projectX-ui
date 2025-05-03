@@ -255,13 +255,16 @@ const MatchesTab = () => {
     
     const isTopCard = index === 0;
     
+    const cardOpacity = isTopCard ? 1 : Math.max(0.7 - (index * 0.15), 0.3);
+    
     const cardStyle = {
       zIndex: matches.length - index,
-      opacity: 1,
+      opacity: cardOpacity,
       transform: [
         { scale: cardScales[index] },
         { translateY: cardOffsets[index] }
       ],
+      backgroundColor: COLORS.PRIMARY,
     };
     
     // Add swipe animations only to the top card
@@ -279,6 +282,11 @@ const MatchesTab = () => {
         {...(isTopCard ? panResponder.panHandlers : {})}
         style={[styles.card, cardStyle]}
       >
+        {/* Add overlay for non-top cards to dim their content */}
+        {!isTopCard && (
+          <View style={styles.cardOverlay} />
+        )}
+        
         <View style={styles.matchImageContainer}>
           <Image source={{ uri: match.image }} style={styles.matchImage} />
           
@@ -314,7 +322,7 @@ const MatchesTab = () => {
           </View>
         </View>
         
-        <View style={styles.matchInfo}>
+        <View style={[styles.matchInfo, !isTopCard && styles.nonTopCardInfo]}>
           <View style={styles.matchNameRow}>
             <Text style={styles.matchName}>{match.name}, {match.age}</Text>
             {isTopCard && (
@@ -469,6 +477,19 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.PRIMARY,
+  },
+  cardOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    zIndex: 10,
+    borderRadius: 20,
+  },
+  nonTopCardInfo: {
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
   },
   header: {
     flexDirection: 'row',
