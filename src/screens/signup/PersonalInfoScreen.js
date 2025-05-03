@@ -255,8 +255,10 @@ const PersonalInfoScreen = ({ phoneNumber }) => {
                                 style={styles.manualDateInput}
                                 placeholder="MM/DD/YYYY"
                                 placeholderTextColor="rgba(255, 255, 255, 0.5)"
-                                value={formatDate(dateOfBirth)}
+                                value={manualDateInput || formatDate(dateOfBirth)}
                                 onChangeText={(text) => {
+                                  setManualDateInput(text);
+                                  
                                   const parts = text.split('/');
                                   if (parts.length === 3) {
                                     const month = parseInt(parts[0]) - 1;
@@ -276,18 +278,88 @@ const PersonalInfoScreen = ({ phoneNumber }) => {
                             )}
                             <TouchableOpacity 
                               style={styles.todayButton}
-                              onPress={() => setDateOfBirth(new Date())}
+                              onPress={() => {
+                                setDateOfBirth(new Date());
+                                setManualDateInput('');
+                              }}
                             >
                               <Text style={styles.todayButtonText}>Today</Text>
                             </TouchableOpacity>
                           </View>
+                          
+                          {/* Quick date selection options */}
+                          <View style={styles.quickDateOptions}>
+                            <TouchableOpacity 
+                              style={styles.quickDateButton}
+                              onPress={() => {
+                                const date18YearsAgo = new Date();
+                                date18YearsAgo.setFullYear(date18YearsAgo.getFullYear() - 18);
+                                setDateOfBirth(date18YearsAgo);
+                                setManualDateInput('');
+                              }}
+                            >
+                              <Text style={styles.quickDateButtonText}>18 Years</Text>
+                            </TouchableOpacity>
+                            
+                            <TouchableOpacity 
+                              style={styles.quickDateButton}
+                              onPress={() => {
+                                const date21YearsAgo = new Date();
+                                date21YearsAgo.setFullYear(date21YearsAgo.getFullYear() - 21);
+                                setDateOfBirth(date21YearsAgo);
+                                setManualDateInput('');
+                              }}
+                            >
+                              <Text style={styles.quickDateButtonText}>21 Years</Text>
+                            </TouchableOpacity>
+                            
+                            <TouchableOpacity 
+                              style={styles.quickDateButton}
+                              onPress={() => {
+                                const date25YearsAgo = new Date();
+                                date25YearsAgo.setFullYear(date25YearsAgo.getFullYear() - 25);
+                                setDateOfBirth(date25YearsAgo);
+                                setManualDateInput('');
+                              }}
+                            >
+                              <Text style={styles.quickDateButtonText}>25 Years</Text>
+                            </TouchableOpacity>
+                            
+                            <TouchableOpacity 
+                              style={styles.quickDateButton}
+                              onPress={() => {
+                                const date30YearsAgo = new Date();
+                                date30YearsAgo.setFullYear(date30YearsAgo.getFullYear() - 30);
+                                setDateOfBirth(date30YearsAgo);
+                                setManualDateInput('');
+                              }}
+                            >
+                              <Text style={styles.quickDateButtonText}>30 Years</Text>
+                            </TouchableOpacity>
+                          </View>
                         </View>
                         
+                        {/* Enhanced calendar header with year and month navigation */}
                         <View style={styles.calendarHeader}>
-                          <Text style={styles.calendarTitle}>
-                            {dateOfBirth.toLocaleString('default', { month: 'long' })} {dateOfBirth.getFullYear()}
-                          </Text>
+                          <View style={styles.calendarTitleContainer}>
+                            <Text style={styles.calendarTitle}>
+                              {dateOfBirth.toLocaleString('default', { month: 'long' })} {dateOfBirth.getFullYear()}
+                            </Text>
+                          </View>
                           <View style={styles.calendarNavigation}>
+                            {/* Year navigation */}
+                            <TouchableOpacity 
+                              style={styles.calendarNavButton}
+                              onPress={() => {
+                                const prevYear = new Date(dateOfBirth);
+                                prevYear.setFullYear(prevYear.getFullYear() - 1);
+                                setDateOfBirth(prevYear);
+                              }}
+                            >
+                              <Text style={styles.calendarNavButtonText}>◀◀</Text>
+                            </TouchableOpacity>
+                            
+                            {/* Month navigation */}
                             <TouchableOpacity 
                               style={styles.calendarNavButton}
                               onPress={() => {
@@ -298,6 +370,7 @@ const PersonalInfoScreen = ({ phoneNumber }) => {
                             >
                               <Text style={styles.calendarNavButtonText}>◀</Text>
                             </TouchableOpacity>
+                            
                             <TouchableOpacity 
                               style={styles.calendarNavButton}
                               onPress={() => {
@@ -309,6 +382,19 @@ const PersonalInfoScreen = ({ phoneNumber }) => {
                               }}
                             >
                               <Text style={styles.calendarNavButtonText}>▶</Text>
+                            </TouchableOpacity>
+                            
+                            <TouchableOpacity 
+                              style={styles.calendarNavButton}
+                              onPress={() => {
+                                const nextYear = new Date(dateOfBirth);
+                                nextYear.setFullYear(nextYear.getFullYear() + 1);
+                                if (nextYear <= new Date()) {
+                                  setDateOfBirth(nextYear);
+                                }
+                              }}
+                            >
+                              <Text style={styles.calendarNavButtonText}>▶▶</Text>
                             </TouchableOpacity>
                           </View>
                         </View>
@@ -620,6 +706,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.2)',
   },
+  calendarTitleContainer: {
+    flex: 1,
+  },
   calendarTitle: {
     fontSize: 18,
     fontWeight: 'bold',
@@ -639,7 +728,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.SECONDARY,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 8,
+    marginLeft: 4,
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
   },
   calendarNavButtonText: {
@@ -717,6 +806,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginBottom: 12,
   },
   manualDateInput: {
     flex: 1,
@@ -741,6 +831,27 @@ const styles = StyleSheet.create({
   todayButtonText: {
     color: COLORS.SECONDARY,
     fontSize: 14,
+    fontWeight: '500',
+  },
+  quickDateOptions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  quickDateButton: {
+    flex: 1,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    marginHorizontal: 2,
+    alignItems: 'center',
+  },
+  quickDateButtonText: {
+    color: COLORS.SECONDARY,
+    fontSize: 12,
     fontWeight: '500',
   },
   modalContainer: {

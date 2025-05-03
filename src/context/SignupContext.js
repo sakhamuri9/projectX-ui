@@ -8,15 +8,20 @@ export const useSignup = () => useContext(SignupContext);
 export const SignupProvider = ({ children }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
-    fullName: '',
-    dateOfBirth: null,
-    gender: '',
     phoneNumber: '',
+    email: '',
     location: {
       city: '',
       state: '',
       country: '',
     },
+    
+    phoneVerified: false,
+    emailVerified: false,
+    
+    fullName: '',
+    dateOfBirth: null,
+    gender: '',
     governmentId: null,
     
     lookingFor: '',
@@ -78,7 +83,7 @@ export const SignupProvider = ({ children }) => {
   };
 
   const nextStep = () => {
-    if (currentStep < 3) {
+    if (currentStep < 5) {
       setCurrentStep(prevStep => prevStep + 1);
     }
   };
@@ -91,16 +96,22 @@ export const SignupProvider = ({ children }) => {
 
   const resetForm = async () => {
     setFormData({
-      fullName: '',
-      dateOfBirth: null,
-      gender: '',
       phoneNumber: '',
+      email: '',
       location: {
         city: '',
         state: '',
         country: '',
       },
+      
+      phoneVerified: false,
+      emailVerified: false,
+      
+      fullName: '',
+      dateOfBirth: null,
+      gender: '',
       governmentId: null,
+      
       lookingFor: '',
       ageRange: { min: 18, max: 60 },
       relationshipIntent: '',
@@ -108,6 +119,7 @@ export const SignupProvider = ({ children }) => {
       caste: '',
       preferredLanguages: [],
       interests: [],
+      
       profilePicture: null,
       bio: '',
       prompts: [
