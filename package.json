@@ -10,12 +10,12 @@
   },
   "dependencies": {
     "@expo/metro-runtime": "~5.0.4",
-    "@expo/vector-icons": "^14.1.0",
+    "@expo/vector-icons": "^13.0.0",
     "@expo/webpack-config": "^18.0.1",
     "expo": "~48.0.0",
     "expo-status-bar": "~1.4.4",
     "expo-svg-uri": "^2.0.0",
-    "lottie-react-native": "^7.2.2",
+    "lottie-react-native": "5.1.4",
     "metro": "^0.76.0",
     "react": "18.2.0",
     "react-async-hook": "^4.0.0",
@@ -23,7 +23,7 @@
     "react-native": "0.71.14",
     "react-native-otp-inputs": "^7.4.0",
     "react-native-phone-number-input": "^2.1.0",
-    "react-native-svg": "^15.11.2",
+    "react-native-svg": "13.4.0",
     "react-native-toast-message": "^2.3.0",
     "react-native-vector-icons": "^10.2.0",
     "react-native-web": "~0.18.10"
