@@ -8,32 +8,37 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../styles/theme';
-import Svg, { Circle, G } from 'react-native-svg';
 
 const InterlockedRings = ({ width = 120, height = 60 }) => {
   return (
-    <Svg width={width} height={height} viewBox="0 0 120 60">
-      <G>
-        {/* Left Ring */}
-        <Circle
-          cx="40"
-          cy="30"
-          r="25"
-          stroke="white"
-          strokeWidth="2"
-          fill="transparent"
-        />
-        {/* Right Ring */}
-        <Circle
-          cx="80"
-          cy="30"
-          r="25"
-          stroke="white"
-          strokeWidth="2"
-          fill="transparent"
-        />
-      </G>
-    </Svg>
+    <View style={{ width, height, position: 'relative' }}>
+      {/* Left Ring */}
+      <View
+        style={{
+          position: 'absolute',
+          left: 15,
+          top: 5,
+          width: 50,
+          height: 50,
+          borderRadius: 25,
+          borderWidth: 2,
+          borderColor: 'white',
+        }}
+      />
+      {/* Right Ring */}
+      <View
+        style={{
+          position: 'absolute',
+          right: 15,
+          top: 5,
+          width: 50,
+          height: 50,
+          borderRadius: 25,
+          borderWidth: 2,
+          borderColor: 'white',
+        }}
+      />
+    </View>
   );
 };
 
