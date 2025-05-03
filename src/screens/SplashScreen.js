@@ -6,18 +6,18 @@ import {
   SafeAreaView,
   Pressable,
   Dimensions,
-  Image,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../styles/theme';
-import { FontAwesome5 } from '@expo/vector-icons';
+import { FontAwesome } from '@expo/vector-icons';
 import Fireworks from '../components/Fireworks';
+import CloudsAnimation from '../components/CloudsAnimation';
 import LightningAnimation from '../components/LightningAnimation';
 
-const WeddingRingsIcon = ({ size = 48, color = 'white' }) => {
+const DoveIcon = ({ size = 48, color = 'white' }) => {
   return (
     <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-      <FontAwesome5 name="ring" size={size} color={color} />
+      <FontAwesome name="twitter" size={size} color={color} />
     </View>
   );
 };
@@ -37,27 +37,22 @@ const SplashScreen = ({ onSignIn, onSignUp }) => {
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
       
-      {/* Clouds background image */}
-      <View style={styles.cloudsContainer}>
-        <Image 
-          source={{ uri: 'https://storage.googleapis.com/uxpilot-auth.appspot.com/f07a10185a-ae5c685f0dd9567bc83e.png' }} 
-          style={styles.cloudsImage} 
-          resizeMode="cover"
-        />
-      </View>
-      
-      {/* Lightning animation */}
+      {/* Atmospheric animations */}
+      <CloudsAnimation />
       <LightningAnimation />
       {showFireworks && <Fireworks play={showFireworks} />}
+      
+      {/* Vertical line at the top */}
+      <View style={styles.verticalLine} />
       
       {/* Brand section with gradient background */}
       <View style={styles.brandSection}>
         {/* Gradient background */}
         <View style={styles.gradientBackground} />
         
-        {/* Wedding rings icon above the logo */}
+        {/* Dove icon above the logo */}
         <View style={styles.iconContainer}>
-          <WeddingRingsIcon size={48} color="white" />
+          <DoveIcon size={48} color="white" />
         </View>
         
         {/* App name with different styling for each part */}
@@ -107,19 +102,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  cloudsContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: '100%',
-    height: '100%',
-    overflow: 'hidden',
-    zIndex: 0,
-  },
-  cloudsImage: {
-    width: '100%',
-    height: 200,
-    opacity: 0.2,
+  verticalLine: {
+    height: 64,
+    width: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    marginBottom: 32,
   },
   brandSection: {
     alignItems: 'center',
