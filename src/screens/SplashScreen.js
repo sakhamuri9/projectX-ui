@@ -8,36 +8,12 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../styles/theme';
+import FontAwesome from 'react-native-vector-icons/FontAwesome';
 
-const InterlockedRings = ({ width = 120, height = 60 }) => {
+const DoveIcon = ({ size = 48, color = 'white' }) => {
   return (
-    <View style={{ width, height, position: 'relative' }}>
-      {/* Left Ring */}
-      <View
-        style={{
-          position: 'absolute',
-          left: 15,
-          top: 5,
-          width: 50,
-          height: 50,
-          borderRadius: 25,
-          borderWidth: 2,
-          borderColor: 'white',
-        }}
-      />
-      {/* Right Ring */}
-      <View
-        style={{
-          position: 'absolute',
-          right: 15,
-          top: 5,
-          width: 50,
-          height: 50,
-          borderRadius: 25,
-          borderWidth: 2,
-          borderColor: 'white',
-        }}
-      />
+    <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+      <FontAwesome name="dove" size={size} color={color} />
     </View>
   );
 };
@@ -55,9 +31,9 @@ const SplashScreen = ({ onSignIn, onSignUp }) => {
         {/* Gradient background */}
         <View style={styles.gradientBackground} />
         
-        {/* Interlocked Rings above the logo */}
-        <View style={styles.ringsContainer}>
-          <InterlockedRings />
+        {/* Dove icon above the logo */}
+        <View style={styles.iconContainer}>
+          <DoveIcon size={48} color="white" />
         </View>
         
         {/* App name with different styling for each part */}
@@ -127,7 +103,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
     zIndex: -1,
   },
-  ringsContainer: {
+  iconContainer: {
     marginBottom: 16,
     alignItems: 'center',
   },
