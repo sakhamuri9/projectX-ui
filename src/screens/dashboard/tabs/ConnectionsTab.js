@@ -358,6 +358,7 @@ const ConnectionsTab = ({ navigation }) => {
             keyExtractor={(item) => `mutual-${item.id.toString()}`}
             contentContainerStyle={styles.connectionsList}
             showsVerticalScrollIndicator={false}
+            testID="mutual-matches-list"
           />
           
           {/* Pending Likes Section */}
@@ -368,6 +369,7 @@ const ConnectionsTab = ({ navigation }) => {
             keyExtractor={(item) => `pending-${item.id.toString()}`}
             contentContainerStyle={styles.connectionsList}
             showsVerticalScrollIndicator={false}
+            testID="pending-likes-list"
           />
           
           {/* Saved Profiles Section */}
@@ -378,6 +380,7 @@ const ConnectionsTab = ({ navigation }) => {
             keyExtractor={(item) => `saved-${item.id.toString()}`}
             contentContainerStyle={styles.connectionsList}
             showsVerticalScrollIndicator={false}
+            testID="saved-profiles-list"
           />
         </View>
       );

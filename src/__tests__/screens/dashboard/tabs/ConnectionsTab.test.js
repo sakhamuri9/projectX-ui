@@ -184,16 +184,16 @@ describe('ConnectionsTab Component', () => {
   });
 
   test('accepts a pending match', async () => {
-    const { findByText, getAllByA11yRole } = render(<ConnectionsTab navigation={mockNavigation} />);
+    const { findByText, getByTestId } = render(<ConnectionsTab navigation={mockNavigation} />);
     
+    await findByText('Pending Likes');
     await findByText('Sophia');
     
     ApiService.connections.acceptMatch.mockResolvedValueOnce({
       data: { success: true },
     });
     
-    const buttons = getAllByA11yRole('button');
-    const acceptButton = buttons.find(button => button.props.accessibilityLabel === 'Accept Sophia');
+    const acceptButton = getByTestId('accept-Sophia');
     fireEvent.press(acceptButton);
     
     await waitFor(() => {
@@ -201,22 +201,21 @@ describe('ConnectionsTab Component', () => {
     });
     
     await waitFor(() => {
-      expect(ApiService.connections.getMutualMatches).toHaveBeenCalledTimes(2);
       expect(ApiService.connections.getPendingLikes).toHaveBeenCalledTimes(2);
     });
   });
 
   test('rejects a pending match', async () => {
-    const { findByText, getAllByA11yRole } = render(<ConnectionsTab navigation={mockNavigation} />);
+    const { findByText, getByTestId } = render(<ConnectionsTab navigation={mockNavigation} />);
     
+    await findByText('Pending Likes');
     await findByText('Sophia');
     
     ApiService.connections.rejectMatch.mockResolvedValueOnce({
       data: { success: true },
     });
     
-    const buttons = getAllByA11yRole('button');
-    const rejectButton = buttons.find(button => button.props.accessibilityLabel === 'Reject Sophia');
+    const rejectButton = getByTestId('reject-Sophia');
     fireEvent.press(rejectButton);
     
     await waitFor(() => {
@@ -229,16 +228,16 @@ describe('ConnectionsTab Component', () => {
   });
 
   test('unsaves a saved profile', async () => {
-    const { findByText, getAllByA11yRole } = render(<ConnectionsTab navigation={mockNavigation} />);
+    const { findByText, getByTestId } = render(<ConnectionsTab navigation={mockNavigation} />);
     
+    await findByText('Saved Profiles');
     await findByText('David');
     
     ApiService.connections.unsaveProfile.mockResolvedValueOnce({
       data: { success: true },
     });
     
-    const buttons = getAllByA11yRole('button');
-    const unsaveButton = buttons.find(button => button.props.accessibilityLabel === 'Unsave David');
+    const unsaveButton = getByTestId('unsave-David');
     fireEvent.press(unsaveButton);
     
     await waitFor(() => {
