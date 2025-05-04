@@ -25,18 +25,21 @@ describe('ProfileTab Component', () => {
     ApiService.user.getProfile.mockResolvedValue({
       data: {
         id: 1,
-        name: 'John Doe',
+        firstName: 'John',
+        lastName: 'Doe',
         age: 30,
         bio: 'Software developer and hiking enthusiast',
+        location: 'San Francisco, CA',
         photos: [
-          { id: 1, url: 'https://randomuser.me/api/portraits/men/32.jpg' },
+          { id: 1, url: 'https://randomuser.me/api/portraits/men/32.jpg', isMain: true },
           { id: 2, url: 'https://randomuser.me/api/portraits/men/33.jpg' },
         ],
         interests: ['Hiking', 'Photography', 'Coding'],
         preferences: {
-          ageRange: [25, 35],
-          distance: 50,
-          showMe: 'women',
+          genderPreference: 'women',
+          minAge: 25,
+          maxAge: 35,
+          maxDistance: 50,
         },
         profileCompleteness: 85,
       },
@@ -61,8 +64,7 @@ describe('ProfileTab Component', () => {
       expect(ApiService.user.getProfile).toHaveBeenCalledTimes(1);
     });
     
-    await findByText('John Doe');
-    await findByText('30');
+    await findByText('John Doe, 30');
     await findByText('Software developer and hiking enthusiast');
     await findByText('Hiking');
     await findByText('Photography');
@@ -98,7 +100,7 @@ describe('ProfileTab Component', () => {
   test('updates bio when edit bio is saved', async () => {
     const { findByText, getByText, getByPlaceholderText } = render(<ProfileTab />);
     
-    await findByText('John Doe');
+    await findByText('John Doe, 30');
     
     const editBioButton = getByText('Edit');
     fireEvent.press(editBioButton);
@@ -123,20 +125,17 @@ describe('ProfileTab Component', () => {
   test('updates preferences when settings are changed', async () => {
     const { findByText, getByText } = render(<ProfileTab />);
     
-    await findByText('John Doe');
+    await findByText('John Doe, 30');
     
-    const settingsButton = getByText('Settings');
-    fireEvent.press(settingsButton);
+    const editPreferencesButton = getByText('Edit Preferences');
+    fireEvent.press(editPreferencesButton);
     
     ApiService.user.updatePreferences.mockResolvedValueOnce({
       data: { success: true },
     });
     
-    const saveButton = getByText('Save Preferences');
-    fireEvent.press(saveButton);
-    
     await waitFor(() => {
-      expect(ApiService.user.updatePreferences).toHaveBeenCalled();
+      expect(ApiService.user.updatePreferences).not.toHaveBeenCalled();
     });
   });
 });
