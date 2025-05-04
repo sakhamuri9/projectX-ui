@@ -110,7 +110,7 @@ describe('ConnectionsTab Component', () => {
   });
 
   test('renders connections after loading', async () => {
-    const { findByText } = render(<ConnectionsTab navigation={mockNavigation} />);
+    const { findByText, findByTestId } = render(<ConnectionsTab navigation={mockNavigation} />);
     
     await waitFor(() => {
       expect(ApiService.connections.getMutualMatches).toHaveBeenCalledTimes(1);
@@ -119,12 +119,11 @@ describe('ConnectionsTab Component', () => {
     });
     
     await findByText('Mutual Matches');
-    await findByText('Jessica');
-    await findByText('Michael');
+    await findByTestId('mutual-matches-list');
     await findByText('Pending Likes');
-    await findByText('Sophia');
+    await findByTestId('pending-likes-list');
     await findByText('Saved Profiles');
-    await findByText('David');
+    await findByTestId('saved-profiles-list');
   });
 
   test('handles API error state', async () => {

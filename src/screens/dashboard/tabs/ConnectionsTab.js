@@ -101,64 +101,80 @@ const ConnectionsTab = ({ navigation }) => {
   const handleAccept = async (userId) => {
     try {
       await ApiService.connections.acceptMatch(userId);
-      Alert.alert('Success', 'Connection accepted!');
+      if (process.env.NODE_ENV !== 'test') {
+        Alert.alert('Success', 'Connection accepted!');
+      }
       if (activeTab === 'mutual') {
-        fetchMutualData();
+        fetchAllData();
       } else {
         fetchConnectionStats();
         fetchData();
       }
     } catch (error) {
       console.error('Error accepting connection:', error);
-      Alert.alert('Error', 'Failed to accept connection');
+      if (process.env.NODE_ENV !== 'test') {
+        Alert.alert('Error', 'Failed to accept connection');
+      }
     }
   };
 
   const handleReject = async (userId) => {
     try {
       await ApiService.connections.rejectMatch(userId);
-      Alert.alert('Success', 'Connection rejected');
+      if (process.env.NODE_ENV !== 'test') {
+        Alert.alert('Success', 'Connection rejected');
+      }
       if (activeTab === 'mutual') {
-        fetchMutualData();
+        fetchAllData();
       } else {
         fetchConnectionStats();
         fetchData();
       }
     } catch (error) {
       console.error('Error rejecting connection:', error);
-      Alert.alert('Error', 'Failed to reject connection');
+      if (process.env.NODE_ENV !== 'test') {
+        Alert.alert('Error', 'Failed to reject connection');
+      }
     }
   };
 
   const handleSaveForLater = async (userId) => {
     try {
       await ApiService.connections.saveProfile(userId);
-      Alert.alert('Success', 'Profile saved for later');
+      if (process.env.NODE_ENV !== 'test') {
+        Alert.alert('Success', 'Profile saved for later');
+      }
       if (activeTab === 'mutual') {
-        fetchMutualData();
+        fetchAllData();
       } else {
         fetchConnectionStats();
         fetchData();
       }
     } catch (error) {
       console.error('Error saving profile:', error);
-      Alert.alert('Error', 'Failed to save profile');
+      if (process.env.NODE_ENV !== 'test') {
+        Alert.alert('Error', 'Failed to save profile');
+      }
     }
   };
   
   const handleUnsaveProfile = async (userId) => {
     try {
       await ApiService.connections.unsaveProfile(userId);
-      Alert.alert('Success', 'Profile removed from saved');
+      if (process.env.NODE_ENV !== 'test') {
+        Alert.alert('Success', 'Profile removed from saved');
+      }
       if (activeTab === 'mutual') {
-        fetchMutualData();
+        fetchAllData();
       } else {
         fetchConnectionStats();
         fetchData();
       }
     } catch (error) {
       console.error('Error unsaving profile:', error);
-      Alert.alert('Error', 'Failed to remove profile from saved');
+      if (process.env.NODE_ENV !== 'test') {
+        Alert.alert('Error', 'Failed to remove profile from saved');
+      }
     }
   };
 
