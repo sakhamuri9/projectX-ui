@@ -9,30 +9,25 @@ import {
   TextInput,
   Animated,
   Modal,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { COLORS } from '../../../styles/theme';
 import * as ImageManipulator from 'expo-image-manipulator';
+import ApiService from '../../../services/ApiService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ProfileTab = () => {
-  const [bio, setBio] = useState('Passionate about travel, photography, and meeting new people. Looking for someone who shares my love for adventure and deep conversations.');
+  const [userData, setUserData] = useState(null);
+  const [bio, setBio] = useState('');
   const [isEditingBio, setIsEditingBio] = useState(false);
-  const [tempBio, setTempBio] = useState(bio);
+  const [tempBio, setTempBio] = useState('');
   const [bioCharLimit] = useState(150);
   
-  const [profileImage, setProfileImage] = useState('https://randomuser.me/api/portraits/men/32.jpg');
+  const [profileImage, setProfileImage] = useState(null);
   const [processedProfileImage, setProcessedProfileImage] = useState(null);
-  const [photoGallery, setPhotoGallery] = useState([
-    'https://randomuser.me/api/portraits/men/32.jpg',
-    'https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0',
-    'https://images.unsplash.com/photo-1568602471122-7832951cc4c5',
-    'https://images.unsplash.com/photo-1492447273231-0f8fecec1e3a',
-    'https://images.unsplash.com/photo-1519058082700-08a0b56da9b4',
-    'https://images.unsplash.com/photo-1463453091185-61582044d556',
-    'https://images.unsplash.com/photo-1516914943479-89db7d9ae7f2',
-    'https://images.unsplash.com/photo-1530268729831-4b0b9e170218',
-    'https://images.unsplash.com/photo-1544723795-3fb6469f5b39'
-  ]);
+  const [photoGallery, setPhotoGallery] = useState([]);
   const [processedGallery, setProcessedGallery] = useState([]);
   const [showGallery, setShowGallery] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState(0);
@@ -41,8 +36,88 @@ const ProfileTab = () => {
   const viewsAnim = useRef(new Animated.Value(0)).current;
   const chatsAnim = useRef(new Animated.Value(0)).current;
   
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
+  
+  const fetchUserProfile = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const response = await ApiService.user.getProfile();
+      
+      if (response && response.data) {
+        const userData = response.data;
+        setUserData(userData);
+        
+        if (userData.bio) {
+          setBio(userData.bio);
+          setTempBio(userData.bio);
+        }
+        
+        if (userData.photos && userData.photos.length > 0) {
+          const mainPhoto = userData.photos.find(photo => photo.isMain) || userData.photos[0];
+          setProfileImage(mainPhoto.url);
+          
+          const photoUrls = userData.photos.map(photo => photo.url);
+          setPhotoGallery(photoUrls);
+        } else {
+          setProfileImage('https://randomuser.me/api/portraits/men/32.jpg');
+          setPhotoGallery(['https://randomuser.me/api/portraits/men/32.jpg']);
+        }
+        
+        const insightsResponse = await ApiService.insights.getProfilePerformance();
+        if (insightsResponse && insightsResponse.data) {
+          const insights = insightsResponse.data;
+          
+          animateValue(likesAnim, insights.likes || 0);
+          animateValue(viewsAnim, insights.views || 0);
+          animateValue(chatsAnim, insights.pendingChats || 0);
+        } else {
+          animateValue(likesAnim, 82);
+          animateValue(viewsAnim, 154);
+          animateValue(chatsAnim, 6);
+        }
+      } else {
+        setError('Failed to load profile data');
+        
+        setProfileImage('https://randomuser.me/api/portraits/men/32.jpg');
+        setPhotoGallery(['https://randomuser.me/api/portraits/men/32.jpg']);
+        animateValue(likesAnim, 82);
+        animateValue(viewsAnim, 154);
+        animateValue(chatsAnim, 6);
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      setError('Failed to load profile data. Please try again.');
+      
+      setProfileImage('https://randomuser.me/api/portraits/men/32.jpg');
+      setPhotoGallery(['https://randomuser.me/api/portraits/men/32.jpg']);
+      animateValue(likesAnim, 82);
+      animateValue(viewsAnim, 154);
+      animateValue(chatsAnim, 6);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const animateValue = (animValue, toValue, duration = 1500) => {
+    Animated.timing(animValue, {
+      toValue,
+      duration,
+      useNativeDriver: false,
+    }).start();
+  };
+  
+  useEffect(() => {
+    fetchUserProfile();
+  }, []);
+  
   useEffect(() => {
     const convertProfileImage = async () => {
+      if (!profileImage) return;
+      
       try {
         const result = await ImageManipulator.manipulateAsync(
           profileImage,
@@ -70,6 +145,8 @@ const ProfileTab = () => {
     };
     
     const convertGalleryImages = async () => {
+      if (!photoGallery || photoGallery.length === 0) return;
+      
       try {
         const processed = await Promise.all(
           photoGallery.map(async (photo) => {
@@ -106,25 +183,14 @@ const ProfileTab = () => {
       }
     };
     
-    convertProfileImage();
-    convertGalleryImages();
-  }, [profileImage, photoGallery]);
-  
-  useEffect(() => {
-    const animateValue = (animValue, toValue, duration = 1500) => {
-      Animated.timing(animValue, {
-        toValue,
-        duration,
-        useNativeDriver: false,
-      }).start();
-    };
+    if (profileImage) {
+      convertProfileImage();
+    }
     
-    setTimeout(() => {
-      animateValue(likesAnim, 82);
-      animateValue(viewsAnim, 154);
-      animateValue(chatsAnim, 6);
-    }, 300);
-  }, []);
+    if (photoGallery.length > 0) {
+      convertGalleryImages();
+    }
+  }, [profileImage, photoGallery]);
   
   const likesAnimText = likesAnim.interpolate({
     inputRange: [0, 82],
@@ -168,9 +234,22 @@ const ProfileTab = () => {
     },
   ];
 
-  const handleSaveBio = () => {
-    setBio(tempBio);
-    setIsEditingBio(false);
+  const handleSaveBio = async () => {
+    try {
+      setIsSaving(true);
+      
+      await ApiService.user.updateProfile({ bio: tempBio });
+      
+      setBio(tempBio);
+      setIsEditingBio(false);
+      
+      Alert.alert('Success', 'Your bio has been updated successfully.');
+    } catch (error) {
+      console.error('Error updating bio:', error);
+      Alert.alert('Error', 'Failed to update your bio. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleCancelBio = () => {
@@ -186,6 +265,31 @@ const ProfileTab = () => {
     );
   };
 
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={COLORS.SECONDARY} />
+        <Text style={styles.loadingText}>Loading your profile...</Text>
+      </View>
+    );
+  }
+  
+  if (error) {
+    return (
+      <View style={styles.errorContainer}>
+        <Ionicons name="alert-circle-outline" size={60} color="rgba(255, 255, 255, 0.2)" />
+        <Text style={styles.errorTitle}>Something went wrong</Text>
+        <Text style={styles.errorMessage}>{error}</Text>
+        <TouchableOpacity 
+          style={styles.retryButton}
+          onPress={fetchUserProfile}
+        >
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+  
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.profileHeader}>
@@ -199,8 +303,12 @@ const ProfileTab = () => {
           </TouchableOpacity>
         </View>
         
-        <Text style={styles.profileName}>Alex Johnson, 28</Text>
-        <Text style={styles.profileLocation}>New York, NY</Text>
+        <Text style={styles.profileName}>
+          {userData ? `${userData.firstName} ${userData.lastName}, ${userData.age}` : 'Loading...'}
+        </Text>
+        <Text style={styles.profileLocation}>
+          {userData ? userData.location : 'Loading...'}
+        </Text>
         
         <TouchableOpacity style={styles.editProfileButton}>
           <Text style={styles.editProfileButtonText}>Edit Profile</Text>
@@ -309,15 +417,26 @@ const ProfileTab = () => {
         <View style={styles.preferenceCard}>
           <View style={styles.preferenceItem}>
             <Text style={styles.preferenceLabel}>Looking for:</Text>
-            <Text style={styles.preferenceValue}>Female, Age 24–30</Text>
+            <Text style={styles.preferenceValue}>
+              {userData && userData.preferences ? 
+                `${userData.preferences.genderPreference}, Age ${userData.preferences.minAge}–${userData.preferences.maxAge}` : 
+                'Loading preferences...'}
+            </Text>
           </View>
           
           <View style={styles.preferenceItem}>
             <Text style={styles.preferenceLabel}>Location:</Text>
-            <Text style={styles.preferenceValue}>10 miles around NYC</Text>
+            <Text style={styles.preferenceValue}>
+              {userData && userData.preferences ? 
+                `${userData.preferences.maxDistance} miles around ${userData.location}` : 
+                'Loading location preferences...'}
+            </Text>
           </View>
           
-          <TouchableOpacity style={styles.editPreferencesButton}>
+          <TouchableOpacity 
+            style={styles.editPreferencesButton}
+            onPress={() => Alert.alert('Coming Soon', 'Preference editing will be available in the next update.')}
+          >
             <Text style={styles.editPreferencesButtonText}>Edit Preferences</Text>
             <MaterialIcons name="chevron-right" size={20} color={COLORS.SECONDARY} />
           </TouchableOpacity>
@@ -333,26 +452,43 @@ const ProfileTab = () => {
         </View>
         
         <View style={styles.notificationsFeed}>
-          <View style={styles.notificationItem}>
-            <View style={[styles.notificationIcon, styles.likeIcon]}>
-              <Ionicons name="heart" size={18} color="#fff" />
+          {notifications && notifications.length > 0 ? (
+            notifications.map((notification, index) => (
+              <View key={index} style={styles.notificationItem}>
+                <View style={[
+                  styles.notificationIcon, 
+                  notification.type === 'like' ? styles.likeIcon : 
+                  notification.type === 'match' ? styles.matchIcon : 
+                  styles.viewIcon
+                ]}>
+                  <Ionicons 
+                    name={
+                      notification.type === 'like' ? "heart" : 
+                      notification.type === 'match' ? "checkmark-circle" : 
+                      notification.type === 'message' ? "chatbubble" : "eye"
+                    } 
+                    size={18} 
+                    color="#fff" 
+                  />
+                </View>
+                <Text style={[
+                  styles.notificationText,
+                  !notification.read && styles.notificationTextUnread
+                ]}>
+                  {notification.type === 'like' ? `${notification.user} liked you` :
+                   notification.type === 'match' ? `Matched with ${notification.user}` :
+                   notification.type === 'message' ? `New message from ${notification.user}` :
+                   `${notification.user} viewed your profile`}
+                </Text>
+                <Text style={styles.notificationTime}>{notification.time}</Text>
+              </View>
+            ))
+          ) : (
+            <View style={styles.emptyNotifications}>
+              <Ionicons name="notifications-off-outline" size={40} color="rgba(255, 255, 255, 0.2)" />
+              <Text style={styles.emptyNotificationsText}>No notifications yet</Text>
             </View>
-            <Text style={styles.notificationText}>Someone liked you</Text>
-          </View>
-          
-          <View style={styles.notificationItem}>
-            <View style={[styles.notificationIcon, styles.viewIcon]}>
-              <Ionicons name="eye" size={18} color="#fff" />
-            </View>
-            <Text style={styles.notificationText}>Someone pinged your profile</Text>
-          </View>
-          
-          <View style={styles.notificationItem}>
-            <View style={[styles.notificationIcon, styles.matchIcon]}>
-              <Ionicons name="checkmark-circle" size={18} color="#fff" />
-            </View>
-            <Text style={styles.notificationText}>Matched with David, 91%</Text>
-          </View>
+          )}
         </View>
       </View>
       
@@ -397,6 +533,49 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.PRIMARY,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.PRIMARY,
+    padding: 20,
+  },
+  loadingText: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 16,
+    marginTop: 16,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.PRIMARY,
+    padding: 20,
+  },
+  errorTitle: {
+    color: COLORS.SECONDARY,
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  errorMessage: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  retryButton: {
+    backgroundColor: COLORS.SECONDARY,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 24,
+  },
+  retryButtonText: {
+    color: COLORS.PRIMARY,
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   profileHeader: {
     alignItems: 'center',
@@ -668,6 +847,26 @@ const styles = StyleSheet.create({
   notificationText: {
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.9)',
+    flex: 1,
+  },
+  notificationTextUnread: {
+    color: COLORS.SECONDARY,
+    fontWeight: 'bold',
+  },
+  notificationTime: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.5)',
+    marginLeft: 8,
+  },
+  emptyNotifications: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  emptyNotificationsText: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.5)',
+    marginTop: 12,
   },
   viewAllText: {
     fontSize: 14,
