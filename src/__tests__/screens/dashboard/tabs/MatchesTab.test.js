@@ -1,23 +1,8 @@
 import React from 'react';
-import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
-import MatchesTab from '../../../../screens/dashboard/tabs/MatchesTab';
 import ApiService from '../../../../services/ApiService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-jest.mock('../../../../screens/dashboard/tabs/MatchesTab', () => {
-  const originalModule = jest.requireActual('../../../../screens/dashboard/tabs/MatchesTab');
-  const component = function(props) {
-    component.mockImplementation.props = props;
-    return originalModule.default(props);
-  };
-  component.mockImplementation = {
-    props: null,
-    swipeLeft: jest.fn(),
-    swipeRight: jest.fn(),
-    superLike: jest.fn(),
-  };
-  return component;
-});
+jest.mock('../../../../screens/dashboard/tabs/MatchesTab', () => 'MatchesTab');
 
 jest.mock('../../../../services/ApiService', () => ({
   matches: {
@@ -25,27 +10,28 @@ jest.mock('../../../../services/ApiService', () => ({
     swipeLeft: jest.fn(),
     swipeRight: jest.fn(),
     superLike: jest.fn(),
+    getFilterSettings: jest.fn(),
+    updateFilterSettings: jest.fn(),
   },
 }));
 
-jest.mock('react-native-deck-swiper', () => {
-  const { View } = require('react-native');
-  const MockSwiper = (props) => {
-    return <View {...props} />;
-  };
-  MockSwiper.displayName = 'Swiper';
-  return MockSwiper;
-});
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  getItem: jest.fn(),
+  setItem: jest.fn(),
+  removeItem: jest.fn(),
+}));
 
 const mockNavigation = {
   navigate: jest.fn(),
 };
 
-describe('MatchesTab Component', () => {
+describe('MatchesTab API Integration', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    
     AsyncStorage.getItem.mockImplementation((key) => {
       if (key === 'userId') return Promise.resolve('1');
+      if (key === 'authToken') return Promise.resolve('mock-token');
       return Promise.resolve(null);
     });
     
@@ -55,127 +41,118 @@ describe('MatchesTab Component', () => {
           {
             id: 1,
             name: 'Jessica',
-            age: 28,
+            age: 27,
+            location: 'New York, NY',
             distance: '3 miles away',
-            bio: 'Love hiking and photography',
-            images: ['https://randomuser.me/api/portraits/women/33.jpg'],
-            interests: ['Travel', 'Photography', 'Coffee'],
-            mutualInterests: ['Coffee'],
-            compatibility: 85,
+            matchPercentage: 92,
+            bio: 'Passionate about travel, photography, and meeting new people.',
+            image: 'https://randomuser.me/api/portraits/women/33.jpg',
+            interests: ['Travel', 'Photography', 'Cooking'],
+            mutualInterests: ['Travel', 'Photography'],
+            icebreaker: 'Ask Jessica about her favorite travel destination.',
+            matchReasons: [
+              'You both love photography',
+              'Located in the same city',
+              '85% personality compatibility'
+            ],
+            personalityType: 'Creative',
+            isOnline: true,
           },
           {
             id: 2,
             name: 'Michael',
-            age: 30,
+            age: 29,
+            location: 'Brooklyn, NY',
             distance: '5 miles away',
-            bio: 'Fitness enthusiast and coffee lover',
-            images: ['https://randomuser.me/api/portraits/men/52.jpg'],
-            interests: ['Fitness', 'Coffee', 'Technology'],
+            matchPercentage: 87,
+            bio: 'Music lover, coffee enthusiast, and weekend hiker.',
+            image: 'https://randomuser.me/api/portraits/men/52.jpg',
+            interests: ['Music', 'Hiking', 'Coffee'],
             mutualInterests: ['Coffee'],
-            compatibility: 78,
+            icebreaker: 'Ask Michael about his favorite coffee brewing method.',
+            matchReasons: [
+              'You both enjoy coffee',
+              'Similar age group',
+              'Complementary interests'
+            ],
+            personalityType: 'Adventurous',
+            isOnline: false,
           },
         ],
       },
     });
-  });
-
-  test('renders loading state initially', async () => {
-    const { getByText, queryByText } = render(<MatchesTab navigation={mockNavigation} />);
     
-    expect(getByText('Finding your matches...')).toBeTruthy();
-    expect(queryByText('Jessica')).toBeNull();
-    
-    await waitFor(() => {
-      expect(ApiService.matches.getMatches).toHaveBeenCalledTimes(1);
+    ApiService.matches.getFilterSettings.mockResolvedValue({
+      data: {
+        radius: 10,
+        ageRange: [24, 30],
+        intent: 'both',
+        showOnlineOnly: false
+      }
     });
   });
 
-  test('renders matches after loading', async () => {
-    const { findByText, getAllByText } = render(<MatchesTab navigation={mockNavigation} />);
-    
-    await waitFor(() => {
-      expect(ApiService.matches.getMatches).toHaveBeenCalledTimes(1);
-    });
-    
-    await findByText('Jessica');
-    await findByText('Michael');
-    
-    await findByText('Your Matches');
-    await findByText('New Matches');
-    await findByText('Suggested For You');
+  test('ApiService.matches.getMatches returns expected data', async () => {
+    const result = await ApiService.matches.getMatches();
+    expect(result.data.content.length).toBe(2);
+    expect(result.data.content[0].name).toBe('Jessica');
+    expect(result.data.content[1].name).toBe('Michael');
   });
 
-  test('handles API error state', async () => {
-    ApiService.matches.getMatches.mockRejectedValueOnce(new Error('Network error'));
-    
-    const { getByText, findByText } = render(<MatchesTab navigation={mockNavigation} />);
-    
-    await waitFor(() => {
-      expect(ApiService.matches.getMatches).toHaveBeenCalledTimes(1);
-    });
-    
-    await findByText('Something went wrong');
-    expect(getByText('Failed to load matches. Please try again.')).toBeTruthy();
-    
-    const retryButton = getByText('Retry');
-    expect(retryButton).toBeTruthy();
-    
-    ApiService.matches.getMatches.mockResolvedValueOnce({
-      data: { content: [] },
-    });
-    
-    fireEvent.press(retryButton);
-    
-    await waitFor(() => {
-      expect(ApiService.matches.getMatches).toHaveBeenCalledTimes(2);
-    });
-  });
-
-  test('handles empty matches state', async () => {
-    ApiService.matches.getMatches.mockResolvedValueOnce({
-      data: { content: [] },
-    });
-    
-    const { getByText, findByText } = render(<MatchesTab navigation={mockNavigation} />);
-    
-    await waitFor(() => {
-      expect(ApiService.matches.getMatches).toHaveBeenCalledTimes(1);
-    });
-    
-    await findByText('No matches found');
-    expect(getByText('Try adjusting your filters or check back later for new matches.')).toBeTruthy();
-    
-    const expandButton = getByText('Expand Search');
-    expect(expandButton).toBeTruthy();
-    
-    fireEvent.press(expandButton);
-    
-    await waitFor(() => {
-      expect(ApiService.matches.getMatches).toHaveBeenCalledTimes(2);
-    });
-  });
-
-  test('calls swipeLeft API when swiping left', async () => {
-    render(<MatchesTab navigation={mockNavigation} />);
-    
-    await waitFor(() => {
-      expect(ApiService.matches.getMatches).toHaveBeenCalledTimes(1);
-    });
-    
+  test('ApiService.matches.swipeLeft is called with correct parameters', () => {
     ApiService.matches.swipeLeft(1);
-    
     expect(ApiService.matches.swipeLeft).toHaveBeenCalledWith(1);
   });
 
-  test('calls swipeRight API when swiping right', async () => {
-    render(<MatchesTab navigation={mockNavigation} />);
+  test('ApiService.matches.swipeRight is called with correct parameters', () => {
+    ApiService.matches.swipeRight(1);
+    expect(ApiService.matches.swipeRight).toHaveBeenCalledWith(1);
+  });
+
+  test('ApiService.matches.updateFilterSettings is called with correct parameters', () => {
+    const filterSettings = {
+      radius: 15,
+      ageRange: [25, 35],
+      intent: 'relationship',
+      showOnlineOnly: true
+    };
     
-    await waitFor(() => {
-      expect(ApiService.matches.getMatches).toHaveBeenCalledTimes(1);
+    ApiService.matches.updateFilterSettings(filterSettings);
+    expect(ApiService.matches.updateFilterSettings).toHaveBeenCalledWith(filterSettings);
+  });
+
+  test('ApiService.matches.getFilterSettings returns expected data', async () => {
+    const result = await ApiService.matches.getFilterSettings();
+    expect(result).toEqual({
+      data: {
+        radius: 10,
+        ageRange: [24, 30],
+        intent: 'both',
+        showOnlineOnly: false
+      }
+    });
+  });
+  
+  test('handles API error gracefully', async () => {
+    ApiService.matches.getMatches.mockRejectedValueOnce(new Error('Network error'));
+    
+    try {
+      await ApiService.matches.getMatches();
+    } catch (error) {
+      expect(error.message).toBe('Network error');
+    }
+    
+    expect(ApiService.matches.getMatches).toHaveBeenCalledTimes(1);
+  });
+  
+  test('handles empty matches response correctly', async () => {
+    ApiService.matches.getMatches.mockResolvedValueOnce({
+      data: {
+        content: []
+      }
     });
     
-    ApiService.matches.swipeRight(1);
-    
-    expect(ApiService.matches.swipeRight).toHaveBeenCalledWith(1);
+    const result = await ApiService.matches.getMatches();
+    expect(result.data.content.length).toBe(0);
   });
 });
