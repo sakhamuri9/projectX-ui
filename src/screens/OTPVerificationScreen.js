@@ -123,7 +123,7 @@ const OTPVerificationScreen = ({ phoneNumber, onVerificationSuccess }) => {
           <OtpInputs
             handleChange={(code) => setOtp(code)}
             numberOfInputs={6}
-            autofillFromClipboard={true}
+            autofillFromClipboard={false}
             inputStyles={styles.otpInput}
             inputContainerStyles={styles.otpInputContainer}
             focusStyles={styles.otpInputFocused}
