@@ -12,12 +12,12 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../../styles/theme';
-import axios from 'axios';
-import { API_URL } from '../../../config/constants';
+import ApiService from '../../../services/ApiService';
 
-const ConnectionsTab = () => {
+const ConnectionsTab = ({ navigation }) => {
   const [activeTab, setActiveTab] = useState('mutual');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [stats, setStats] = useState({
     mutualMatchesCount: 0,
     pendingLikesCount: 0,
@@ -28,54 +28,67 @@ const ConnectionsTab = () => {
   const [savedProfiles, setSavedProfiles] = useState([]);
 
   useEffect(() => {
-    fetchConnectionStats();
-    fetchData();
-  }, [activeTab]);
+    fetchAllData();
+  }, []);
+  
+  const fetchAllData = async () => {
+    setLoading(true);
+    try {
+      const [mutualResponse, pendingResponse, savedResponse] = await Promise.all([
+        ApiService.connections.getMutualMatches(),
+        ApiService.connections.getPendingLikes(),
+        ApiService.connections.getSavedProfiles()
+      ]);
+      
+      setMutualMatches(mutualResponse.data.content || []);
+      setPendingLikes(pendingResponse.data.content || []);
+      setSavedProfiles(savedResponse.data.content || []);
+      
+      setStats({
+        mutualMatchesCount: mutualResponse.data.content ? mutualResponse.data.content.length : 0,
+        pendingLikesCount: pendingResponse.data.content ? pendingResponse.data.content.length : 0,
+        savedProfilesCount: savedResponse.data.content ? savedResponse.data.content.length : 0
+      });
+    } catch (error) {
+      console.error('Error fetching mutual data:', error);
+      Alert.alert('Error', 'Failed to load connections');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchConnectionStats = async () => {
     try {
-      const response = await axios.get(`${API_URL}/connections/stats`);
-      setStats(response.data);
+      const response = await ApiService.connections.getMutualMatches();
+      const pendingResponse = await ApiService.connections.getPendingLikes();
+      const savedResponse = await ApiService.connections.getSavedProfiles();
+      
+      setStats({
+        mutualMatchesCount: response.data.content ? response.data.content.length : 0,
+        pendingLikesCount: pendingResponse.data.content ? pendingResponse.data.content.length : 0,
+        savedProfilesCount: savedResponse.data.content ? savedResponse.data.content.length : 0
+      });
     } catch (error) {
       console.error('Error fetching connection stats:', error);
+      setError(error);
     }
   };
 
   const fetchData = async () => {
     setLoading(true);
+    setError(null);
     try {
-      let endpoint = '';
+      const mutualResponse = await ApiService.connections.getMutualMatches();
+      setMutualMatches(mutualResponse.data.content || []);
       
-      switch (activeTab) {
-        case 'mutual':
-          endpoint = '/connections/mutual-matches';
-          break;
-        case 'pending':
-          endpoint = '/connections/pending-likes';
-          break;
-        case 'saved':
-          endpoint = '/connections/saved-profiles';
-          break;
-        default:
-          endpoint = '/connections/mutual-matches';
-      }
+      const pendingResponse = await ApiService.connections.getPendingLikes();
+      setPendingLikes(pendingResponse.data.content || []);
       
-      const response = await axios.get(`${API_URL}${endpoint}`);
-      
-      switch (activeTab) {
-        case 'mutual':
-          setMutualMatches(response.data);
-          break;
-        case 'pending':
-          setPendingLikes(response.data);
-          break;
-        case 'saved':
-          setSavedProfiles(response.data);
-          break;
-      }
+      const savedResponse = await ApiService.connections.getSavedProfiles();
+      setSavedProfiles(savedResponse.data.content || []);
     } catch (error) {
-      console.error(`Error fetching ${activeTab} data:`, error);
-      Alert.alert('Error', `Failed to load ${activeTab} connections`);
+      console.error('Error fetching connection data:', error);
+      setError(error);
     } finally {
       setLoading(false);
     }
@@ -83,10 +96,14 @@ const ConnectionsTab = () => {
 
   const handleAccept = async (userId) => {
     try {
-      await axios.post(`${API_URL}/connections/accept/${userId}`);
+      await ApiService.connections.acceptMatch(userId);
       Alert.alert('Success', 'Connection accepted!');
-      fetchConnectionStats();
-      fetchData();
+      if (activeTab === 'mutual') {
+        fetchMutualData();
+      } else {
+        fetchConnectionStats();
+        fetchData();
+      }
     } catch (error) {
       console.error('Error accepting connection:', error);
       Alert.alert('Error', 'Failed to accept connection');
@@ -95,10 +112,14 @@ const ConnectionsTab = () => {
 
   const handleReject = async (userId) => {
     try {
-      await axios.post(`${API_URL}/connections/reject/${userId}`);
+      await ApiService.connections.rejectMatch(userId);
       Alert.alert('Success', 'Connection rejected');
-      fetchConnectionStats();
-      fetchData();
+      if (activeTab === 'mutual') {
+        fetchMutualData();
+      } else {
+        fetchConnectionStats();
+        fetchData();
+      }
     } catch (error) {
       console.error('Error rejecting connection:', error);
       Alert.alert('Error', 'Failed to reject connection');
@@ -107,13 +128,33 @@ const ConnectionsTab = () => {
 
   const handleSaveForLater = async (userId) => {
     try {
-      await axios.post(`${API_URL}/connections/save-for-later/${userId}`);
+      await ApiService.connections.saveProfile(userId);
       Alert.alert('Success', 'Profile saved for later');
-      fetchConnectionStats();
-      fetchData();
+      if (activeTab === 'mutual') {
+        fetchMutualData();
+      } else {
+        fetchConnectionStats();
+        fetchData();
+      }
     } catch (error) {
       console.error('Error saving profile:', error);
       Alert.alert('Error', 'Failed to save profile');
+    }
+  };
+  
+  const handleUnsaveProfile = async (userId) => {
+    try {
+      await ApiService.connections.unsaveProfile(userId);
+      Alert.alert('Success', 'Profile removed from saved');
+      if (activeTab === 'mutual') {
+        fetchMutualData();
+      } else {
+        fetchConnectionStats();
+        fetchData();
+      }
+    } catch (error) {
+      console.error('Error unsaving profile:', error);
+      Alert.alert('Error', 'Failed to remove profile from saved');
     }
   };
 
@@ -184,6 +225,8 @@ const ConnectionsTab = () => {
         <TouchableOpacity 
           style={[styles.actionButton, styles.acceptButton]}
           onPress={() => handleAccept(item.userId)}
+          testID={`accept-${item.name}`}
+          accessibilityLabel={`Accept ${item.name}`}
         >
           <Ionicons name="checkmark" size={20} color="#34C759" />
         </TouchableOpacity>
@@ -191,6 +234,8 @@ const ConnectionsTab = () => {
         <TouchableOpacity 
           style={[styles.actionButton, styles.rejectButton]}
           onPress={() => handleReject(item.userId)}
+          testID={`reject-${item.name}`}
+          accessibilityLabel={`Reject ${item.name}`}
         >
           <Ionicons name="close" size={20} color="#FF3B30" />
         </TouchableOpacity>
@@ -198,6 +243,8 @@ const ConnectionsTab = () => {
         <TouchableOpacity 
           style={[styles.actionButton, styles.saveButton]}
           onPress={() => handleSaveForLater(item.userId)}
+          testID={`save-${item.name}`}
+          accessibilityLabel={`Save ${item.name}`}
         >
           <Ionicons name="bookmark-outline" size={20} color={COLORS.SECONDARY} />
         </TouchableOpacity>
@@ -233,13 +280,17 @@ const ConnectionsTab = () => {
         <TouchableOpacity 
           style={[styles.actionButton, styles.acceptButton]}
           onPress={() => handleAccept(item.userId)}
+          testID={`accept-saved-${item.name}`}
+          accessibilityLabel={`Accept ${item.name}`}
         >
           <Ionicons name="checkmark" size={20} color="#34C759" />
         </TouchableOpacity>
         
         <TouchableOpacity 
           style={[styles.actionButton, styles.rejectButton]}
-          onPress={() => handleReject(item.userId)}
+          onPress={() => handleUnsaveProfile(item.userId)}
+          testID={`unsave-${item.name}`}
+          accessibilityLabel={`Unsave ${item.name}`}
         >
           <Ionicons name="close" size={20} color="#FF3B30" />
         </TouchableOpacity>
@@ -248,6 +299,25 @@ const ConnectionsTab = () => {
   );
 
   const renderContent = () => {
+    if (error) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="alert-circle-outline" size={60} color="rgba(255, 255, 255, 0.3)" />
+          <Text style={styles.errorTitle}>Something went wrong</Text>
+          <Text style={styles.emptyText}>Failed to load connections. Please try again.</Text>
+          <TouchableOpacity 
+            style={styles.retryButton}
+            onPress={() => {
+              setError(null);
+              fetchAllData();
+            }}
+          >
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+    
     if (loading) {
       return (
         <View style={styles.loadingContainer}>
@@ -257,25 +327,45 @@ const ConnectionsTab = () => {
       );
     }
 
+    if (mutualMatches.length === 0 && pendingLikes.length === 0 && savedProfiles.length === 0) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="heart-dislike-outline" size={60} color="rgba(255, 255, 255, 0.3)" />
+          <Text style={styles.emptyText}>No connections yet</Text>
+          <Text style={styles.emptySubText}>Start matching with people to build connections</Text>
+          <TouchableOpacity 
+            style={styles.findMatchesButton}
+            onPress={() => navigation.navigate('MatchesTab')}
+          >
+            <Text style={styles.findMatchesButtonText}>Find Matches</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
     let data = [];
     let renderItem = null;
     let emptyMessage = '';
+    let sectionTitle = '';
 
     switch (activeTab) {
       case 'mutual':
         data = mutualMatches;
         renderItem = renderMutualMatchItem;
         emptyMessage = 'No mutual matches yet. Keep swiping!';
+        sectionTitle = 'Mutual Matches';
         break;
       case 'pending':
         data = pendingLikes;
         renderItem = renderPendingLikeItem;
         emptyMessage = 'No pending likes at the moment.';
+        sectionTitle = 'Pending Likes';
         break;
       case 'saved':
         data = savedProfiles;
         renderItem = renderSavedProfileItem;
         emptyMessage = 'No saved profiles yet.';
+        sectionTitle = 'Saved Profiles';
         break;
     }
 
@@ -289,13 +379,16 @@ const ConnectionsTab = () => {
     }
 
     return (
-      <FlatList
-        data={data}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={styles.connectionsList}
-        showsVerticalScrollIndicator={false}
-      />
+      <View style={styles.contentContainer}>
+        <Text style={styles.sectionTitle}>{sectionTitle}</Text>
+        <FlatList
+          data={data}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id.toString()}
+          contentContainerStyle={styles.connectionsList}
+          showsVerticalScrollIndicator={false}
+        />
+      </View>
     );
   };
 
@@ -328,6 +421,7 @@ const ConnectionsTab = () => {
         <TouchableOpacity 
           style={[styles.tab, activeTab === 'mutual' && styles.activeTab]}
           onPress={() => setActiveTab('mutual')}
+          testID="mutual-tab"
         >
           <Text style={[styles.tabText, activeTab === 'mutual' && styles.activeTabText]}>
             Mutual
@@ -336,6 +430,7 @@ const ConnectionsTab = () => {
         <TouchableOpacity 
           style={[styles.tab, activeTab === 'pending' && styles.activeTab]}
           onPress={() => setActiveTab('pending')}
+          testID="pending-tab"
         >
           <Text style={[styles.tabText, activeTab === 'pending' && styles.activeTabText]}>
             Pending
@@ -344,6 +439,7 @@ const ConnectionsTab = () => {
         <TouchableOpacity 
           style={[styles.tab, activeTab === 'saved' && styles.activeTab]}
           onPress={() => setActiveTab('saved')}
+          testID="saved-tab"
         >
           <Text style={[styles.tabText, activeTab === 'saved' && styles.activeTabText]}>
             Saved
@@ -431,8 +527,18 @@ const styles = StyleSheet.create({
     color: COLORS.SECONDARY,
     fontWeight: 'bold',
   },
-  connectionsList: {
+  contentContainer: {
+    flex: 1,
     padding: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: COLORS.SECONDARY,
+    marginBottom: 12,
+  },
+  connectionsList: {
+    paddingBottom: 16,
   },
   connectionItem: {
     flexDirection: 'row',
@@ -583,11 +689,46 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 40,
   },
+  errorTitle: {
+    marginTop: 10,
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: COLORS.SECONDARY,
+    textAlign: 'center',
+  },
   emptyText: {
-    marginTop: 20,
+    marginTop: 10,
     fontSize: 16,
     color: 'rgba(255, 255, 255, 0.7)',
     textAlign: 'center',
+  },
+  emptySubText: {
+    marginTop: 5,
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.5)',
+    textAlign: 'center',
+  },
+  retryButton: {
+    marginTop: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    backgroundColor: COLORS.SECONDARY,
+    borderRadius: 20,
+  },
+  retryButtonText: {
+    color: COLORS.PRIMARY,
+    fontWeight: 'bold',
+  },
+  findMatchesButton: {
+    marginTop: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    backgroundColor: COLORS.SECONDARY,
+    borderRadius: 20,
+  },
+  findMatchesButtonText: {
+    color: COLORS.PRIMARY,
+    fontWeight: 'bold',
   },
 });
 
