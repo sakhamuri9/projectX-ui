@@ -30,9 +30,11 @@ jest.mock('../../../../services/ApiService', () => ({
 
 jest.mock('react-native-deck-swiper', () => {
   const { View } = require('react-native');
-  return {
-    default: View,
+  const MockSwiper = (props) => {
+    return <View {...props} />;
   };
+  MockSwiper.displayName = 'Swiper';
+  return MockSwiper;
 });
 
 const mockNavigation = {
