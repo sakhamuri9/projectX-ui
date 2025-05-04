@@ -11,16 +11,20 @@ import {
   PanResponder,
   Modal,
   Slider,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons, FontAwesome, MaterialIcons } from '@expo/vector-icons';
 import { COLORS } from '../../../styles/theme';
+import ApiService from '../../../services/ApiService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width, height } = Dimensions.get('window');
 const CARD_WIDTH = Math.min(width * 0.85, 400);
 const CARD_HEIGHT = Math.min(height * 0.6, CARD_WIDTH * 1.5);
 const CARD_STACK_OFFSET = 8; // Offset for stacked cards
 
-const MatchesTab = () => {
+const MatchesTab = ({ navigation }) => {
   const [likeCount, setLikeCount] = useState(0);
   const [dislikeCount, setDislikeCount] = useState(0);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -36,6 +40,11 @@ const MatchesTab = () => {
   });
   const [matchStreak, setMatchStreak] = useState(3); // Days of consecutive matching
   const [hasBoost, setHasBoost] = useState(false);
+  
+  const [matches, setMatches] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [userId, setUserId] = useState(null);
   
   const position = useRef(new Animated.ValueXY()).current;
   const cardScales = useRef([
@@ -70,7 +79,46 @@ const MatchesTab = () => {
     extrapolate: 'clamp',
   });
   
+  const fetchMatches = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const storedUserId = await AsyncStorage.getItem('userId');
+      if (storedUserId) {
+        setUserId(parseInt(storedUserId, 10));
+      } else {
+        setUserId(1);
+        await AsyncStorage.setItem('userId', '1');
+      }
+      
+      const params = new URLSearchParams();
+      params.append('radius', filterSettings.radius);
+      params.append('minAge', filterSettings.ageRange[0]);
+      params.append('maxAge', filterSettings.ageRange[1]);
+      params.append('intent', filterSettings.intent);
+      if (filterSettings.showOnlineOnly) {
+        params.append('onlineOnly', 'true');
+      }
+      
+      const response = await ApiService.matches.getMatches();
+      
+      if (response && response.data) {
+        setMatches(response.data.content || []);
+      } else {
+        setMatches(mockMatches);
+      }
+    } catch (error) {
+      console.error('Error fetching matches:', error);
+      setError('Failed to load matches. Please try again.');
+      setMatches(mockMatches);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
   useEffect(() => {
+    fetchMatches();
     initializeCardPositions();
   }, []);
   
@@ -170,7 +218,10 @@ const MatchesTab = () => {
     return reactions[randomIndex];
   };
   
-  const swipeLeft = () => {
+  const swipeLeft = async () => {
+    if (matches.length === 0 || isLoading) return;
+    
+    const currentMatch = matches[currentIndex];
     const reaction = getRandomReaction(likeReactions);
     setCurrentLikeReaction(reaction);
     
@@ -192,9 +243,18 @@ const MatchesTab = () => {
     });
     
     animateCardsUp();
+    
+    try {
+      await ApiService.matches.swipeRight(currentMatch.id);
+    } catch (error) {
+      console.error('Error registering like:', error);
+    }
   };
   
-  const swipeRight = () => {
+  const swipeRight = async () => {
+    if (matches.length === 0 || isLoading) return;
+    
+    const currentMatch = matches[currentIndex];
     const reaction = getRandomReaction(skipReactions);
     setCurrentSkipReaction(reaction);
     
@@ -216,6 +276,12 @@ const MatchesTab = () => {
     });
     
     animateCardsUp();
+    
+    try {
+      await ApiService.matches.swipeLeft(currentMatch.id);
+    } catch (error) {
+      console.error('Error registering dislike:', error);
+    }
   };
   
   const animateCardsUp = () => {
@@ -244,7 +310,7 @@ const MatchesTab = () => {
 
   const userInterests = ['Travel', 'Photography', 'Coffee', 'Fitness', 'Technology'];
   
-  const matches = [
+  const mockMatches = [
     {
       id: 1,
       name: 'Jessica',
@@ -495,6 +561,57 @@ const MatchesTab = () => {
     );
   };
 
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={COLORS.SECONDARY} />
+        <Text style={styles.loadingText}>Finding your matches...</Text>
+      </View>
+    );
+  }
+  
+  if (error) {
+    return (
+      <View style={styles.errorContainer}>
+        <Ionicons name="alert-circle-outline" size={60} color="rgba(255, 255, 255, 0.2)" />
+        <Text style={styles.errorTitle}>Something went wrong</Text>
+        <Text style={styles.errorMessage}>{error}</Text>
+        <TouchableOpacity 
+          style={styles.retryButton}
+          onPress={fetchMatches}
+        >
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+  
+  if (matches.length === 0) {
+    return (
+      <View style={styles.emptyContainer}>
+        <Ionicons name="search" size={60} color="rgba(255, 255, 255, 0.2)" />
+        <Text style={styles.emptyTitle}>No matches found</Text>
+        <Text style={styles.emptyMessage}>
+          Try adjusting your filters or check back later for new matches.
+        </Text>
+        <TouchableOpacity 
+          style={styles.retryButton}
+          onPress={() => {
+            setFilterSettings({
+              radius: 30,
+              ageRange: [18, 50],
+              intent: 'both',
+              showOnlineOnly: false
+            });
+            fetchMatches();
+          }}
+        >
+          <Text style={styles.retryButtonText}>Expand Search</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+  
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -850,6 +967,69 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.PRIMARY,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.PRIMARY,
+    padding: 20,
+  },
+  loadingText: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 16,
+    marginTop: 16,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.PRIMARY,
+    padding: 20,
+  },
+  errorTitle: {
+    color: COLORS.SECONDARY,
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  errorMessage: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.PRIMARY,
+    padding: 20,
+  },
+  emptyTitle: {
+    color: COLORS.SECONDARY,
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptyMessage: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  retryButton: {
+    backgroundColor: COLORS.SECONDARY,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 24,
+  },
+  retryButtonText: {
+    color: COLORS.PRIMARY,
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   cardOverlay: {
     position: 'absolute',
