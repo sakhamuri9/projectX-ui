@@ -5,6 +5,20 @@ import ApiService from '../../../../services/ApiService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import webSocketService from '../../../../utils/WebSocketService';
 
+jest.mock('../../../../screens/dashboard/tabs/ChatTab', () => {
+  const originalModule = jest.requireActual('../../../../screens/dashboard/tabs/ChatTab');
+  const component = function(props) {
+    component.mockImplementation.props = props;
+    return originalModule.default(props);
+  };
+  component.mockImplementation = {
+    props: null,
+    handleConversationPress: jest.fn(),
+    handleNewMessage: jest.fn(),
+  };
+  return component;
+});
+
 jest.mock('../../../../services/ApiService', () => ({
   chat: {
     getConversations: jest.fn(),
