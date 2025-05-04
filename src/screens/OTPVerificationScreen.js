@@ -10,9 +10,8 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../styles/theme';
-import OtpInputs from 'react-native-otp-inputs';
+import OTPTextInput from 'react-native-otp-textinput';
 import Toast from 'react-native-toast-message';
-import Clipboard from '../utils/ClipboardManager';
 
 const OTPVerificationScreen = ({ phoneNumber, onVerificationSuccess }) => {
   const [otp, setOtp] = useState('');
@@ -121,13 +120,13 @@ const OTPVerificationScreen = ({ phoneNumber, onVerificationSuccess }) => {
         </Text>
         
         <View style={styles.otpContainer}>
-          <OtpInputs
-            handleChange={(code) => setOtp(code)}
-            numberOfInputs={6}
-            autofillFromClipboard={false}
-            inputStyles={styles.otpInput}
-            inputContainerStyles={styles.otpInputContainer}
-            focusStyles={styles.otpInputFocused}
+          <OTPTextInput
+            handleTextChange={(code) => setOtp(code)}
+            inputCount={6}
+            textInputStyle={styles.otpInput}
+            containerStyle={styles.otpInputContainer}
+            tintColor={COLORS.SECONDARY}
+            offTintColor={COLORS.PRIMARY}
           />
         </View>
         
