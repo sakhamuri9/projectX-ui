@@ -9,101 +9,297 @@ import {
   Modal,
   Dimensions,
   Share,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import { COLORS } from '../../../styles/theme';
 import { PieChart } from 'react-native-chart-kit';
 import { LinearGradient } from 'expo-linear-gradient';
+import ApiService from '../../../services/ApiService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const InsightsTab = () => {
   const [showShareModal, setShowShareModal] = useState(false);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
+  const [profileViews, setProfileViews] = useState(0);
+  const [likesReceived, setLikesReceived] = useState(0);
+  const [matchRate, setMatchRate] = useState(0);
+  const [profileCompleteness, setProfileCompleteness] = useState(0);
+  const [personalityData, setPersonalityData] = useState([]);
+  const [locationData, setLocationData] = useState([]);
+  const [engagementData, setEngagementData] = useState([]);
+  const [completionTasks, setCompletionTasks] = useState([]);
+  const [trendingTags, setTrendingTags] = useState([]);
+  const [topPhoto, setTopPhoto] = useState(null);
+  const [vibeRatings, setVibeRatings] = useState([]);
+  const [boostRecommendation, setBoostRecommendation] = useState(null);
+  const [weeklyData, setWeeklyData] = useState([]);
   
   const screenWidth = Dimensions.get('window').width;
   
-  const profileViews = 128;
-  const likesReceived = 43;
-  const matchRate = 68; // percentage
-  const profileCompleteness = 85; // percentage
-  
-  const personalityData = [
-    {
-      name: 'Creative',
-      population: 35,
-      color: '#FF6B6B',
-      legendFontColor: '#FFF',
-      legendFontSize: 12,
-    },
-    {
-      name: 'Ambitious',
-      population: 40,
-      color: '#4ECDC4',
-      legendFontColor: '#FFF',
-      legendFontSize: 12,
-    },
-    {
-      name: 'Adventurous',
-      population: 25,
-      color: '#FFD166',
-      legendFontColor: '#FFF',
-      legendFontSize: 12,
-    },
-  ];
-  
-  const locationData = [
-    { city: 'New York', views: 42, percentage: 300 },
-    { city: 'Los Angeles', views: 28, percentage: 200 },
-    { city: 'Chicago', views: 15, percentage: 100 },
-  ];
-  
-  const engagementData = [
-    { day: 'Mon', morning: 5, afternoon: 7, evening: 12, night: 8 },
-    { day: 'Tue', morning: 6, afternoon: 8, evening: 15, night: 10 },
-    { day: 'Wed', morning: 8, afternoon: 10, evening: 18, night: 12 },
-    { day: 'Thu', morning: 7, afternoon: 9, evening: 14, night: 9 },
-    { day: 'Fri', morning: 9, afternoon: 12, evening: 22, night: 18 },
-    { day: 'Sat', morning: 10, afternoon: 15, evening: 25, night: 20 },
-    { day: 'Sun', morning: 8, afternoon: 11, evening: 16, night: 14 },
-  ];
-  
-  const completionTasks = [
-    { task: 'Add 1 more interest', completed: false },
-    { task: 'Upload 1 more photo', completed: false },
-    { task: 'Answer 1 prompt', completed: false },
-  ];
-  
-  const trendingTags = [
-    { tag: 'Photography', popularity: 92 },
-    { tag: 'Hiking', popularity: 87 },
-    { tag: 'Cooking', popularity: 78 },
-    { tag: 'Yoga', popularity: 72 },
-    { tag: 'Travel', popularity: 68 },
-  ];
-  
-  const topPhoto = {
-    url: 'https://randomuser.me/api/portraits/men/32.jpg',
-    likeRate: 60,
+  const fetchInsights = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const userId = await AsyncStorage.getItem('userId') || '1';
+      
+      const performanceResponse = await ApiService.insights.getProfilePerformance();
+      
+      if (performanceResponse && performanceResponse.data) {
+        const performance = performanceResponse.data;
+        
+        setProfileViews(performance.views || 128);
+        setLikesReceived(performance.likes || 43);
+        setMatchRate(performance.matchRate || 68);
+        setProfileCompleteness(performance.profileCompleteness || 85);
+      }
+      
+      const personalityResponse = await ApiService.insights.getPersonalityInsights();
+      
+      if (personalityResponse && personalityResponse.data) {
+        setPersonalityData(personalityResponse.data.map(item => ({
+          name: item.trait,
+          population: item.percentage,
+          color: item.color || getRandomColor(),
+          legendFontColor: '#FFF',
+          legendFontSize: 12,
+        })));
+      } else {
+        setPersonalityData([
+          {
+            name: 'Creative',
+            population: 35,
+            color: '#FF6B6B',
+            legendFontColor: '#FFF',
+            legendFontSize: 12,
+          },
+          {
+            name: 'Ambitious',
+            population: 40,
+            color: '#4ECDC4',
+            legendFontColor: '#FFF',
+            legendFontSize: 12,
+          },
+          {
+            name: 'Adventurous',
+            population: 25,
+            color: '#FFD166',
+            legendFontColor: '#FFF',
+            legendFontSize: 12,
+          },
+        ]);
+      }
+      
+      const locationResponse = await ApiService.insights.getLocationHeatmap();
+      
+      if (locationResponse && locationResponse.data) {
+        setLocationData(locationResponse.data.map(item => ({
+          city: item.location,
+          views: item.views,
+          percentage: item.percentage,
+        })));
+      } else {
+        setLocationData([
+          { city: 'New York', views: 42, percentage: 300 },
+          { city: 'Los Angeles', views: 28, percentage: 200 },
+          { city: 'Chicago', views: 15, percentage: 100 },
+        ]);
+      }
+      
+      const engagementResponse = await ApiService.insights.getEngagementTiming();
+      
+      if (engagementResponse && engagementResponse.data) {
+        setEngagementData(engagementResponse.data);
+      } else {
+        setEngagementData([
+          { day: 'Mon', morning: 5, afternoon: 7, evening: 12, night: 8 },
+          { day: 'Tue', morning: 6, afternoon: 8, evening: 15, night: 10 },
+          { day: 'Wed', morning: 8, afternoon: 10, evening: 18, night: 12 },
+          { day: 'Thu', morning: 7, afternoon: 9, evening: 14, night: 9 },
+          { day: 'Fri', morning: 9, afternoon: 12, evening: 22, night: 18 },
+          { day: 'Sat', morning: 10, afternoon: 15, evening: 25, night: 20 },
+          { day: 'Sun', morning: 8, afternoon: 11, evening: 16, night: 14 },
+        ]);
+      }
+      
+      const completionResponse = await ApiService.insights.getProfileCompletionTasks();
+      
+      if (completionResponse && completionResponse.data) {
+        setCompletionTasks(completionResponse.data);
+      } else {
+        setCompletionTasks([
+          { task: 'Add 1 more interest', completed: false },
+          { task: 'Upload 1 more photo', completed: false },
+          { task: 'Answer 1 prompt', completed: false },
+        ]);
+      }
+      
+      const tagsResponse = await ApiService.insights.getTrendingTags();
+      
+      if (tagsResponse && tagsResponse.data) {
+        setTrendingTags(tagsResponse.data.map(item => ({
+          tag: item.name,
+          popularity: item.popularity,
+        })));
+      } else {
+        setTrendingTags([
+          { tag: 'Photography', popularity: 92 },
+          { tag: 'Hiking', popularity: 87 },
+          { tag: 'Cooking', popularity: 78 },
+          { tag: 'Yoga', popularity: 72 },
+          { tag: 'Travel', popularity: 68 },
+        ]);
+      }
+      
+      const photoResponse = await ApiService.insights.getTopPerformingPhoto();
+      
+      if (photoResponse && photoResponse.data) {
+        setTopPhoto({
+          url: photoResponse.data.url,
+          likeRate: photoResponse.data.likeRate,
+        });
+      } else {
+        setTopPhoto({
+          url: 'https://randomuser.me/api/portraits/men/32.jpg',
+          likeRate: 60,
+        });
+      }
+      
+      const vibeResponse = await ApiService.insights.getVibeRatings();
+      
+      if (vibeResponse && vibeResponse.data) {
+        setVibeRatings(vibeResponse.data);
+      } else {
+        setVibeRatings(['Mysterious', 'Stylish', 'Witty']);
+      }
+      
+      const boostResponse = await ApiService.insights.getBoostRecommendation();
+      
+      if (boostResponse && boostResponse.data) {
+        setBoostRecommendation(boostResponse.data);
+      } else {
+        setBoostRecommendation({
+          day: 'Friday',
+          time: '8:00 PM',
+          multiplier: '10x',
+        });
+      }
+      
+      const weeklyResponse = await ApiService.insights.getWeeklyViews();
+      
+      if (weeklyResponse && weeklyResponse.data) {
+        setWeeklyData(weeklyResponse.data);
+      } else {
+        setWeeklyData([
+          { day: 'Mon', views: 12 },
+          { day: 'Tue', views: 18 },
+          { day: 'Wed', views: 25 },
+          { day: 'Thu', views: 15 },
+          { day: 'Fri', views: 30 },
+          { day: 'Sat', views: 42 },
+          { day: 'Sun', views: 22 },
+        ]);
+      }
+    } catch (error) {
+      console.error('Error fetching insights:', error);
+      setError('Failed to load insights data. Please try again.');
+      
+      setPersonalityData([
+        {
+          name: 'Creative',
+          population: 35,
+          color: '#FF6B6B',
+          legendFontColor: '#FFF',
+          legendFontSize: 12,
+        },
+        {
+          name: 'Ambitious',
+          population: 40,
+          color: '#4ECDC4',
+          legendFontColor: '#FFF',
+          legendFontSize: 12,
+        },
+        {
+          name: 'Adventurous',
+          population: 25,
+          color: '#FFD166',
+          legendFontColor: '#FFF',
+          legendFontSize: 12,
+        },
+      ]);
+      
+      setLocationData([
+        { city: 'New York', views: 42, percentage: 300 },
+        { city: 'Los Angeles', views: 28, percentage: 200 },
+        { city: 'Chicago', views: 15, percentage: 100 },
+      ]);
+      
+      setEngagementData([
+        { day: 'Mon', morning: 5, afternoon: 7, evening: 12, night: 8 },
+        { day: 'Tue', morning: 6, afternoon: 8, evening: 15, night: 10 },
+        { day: 'Wed', morning: 8, afternoon: 10, evening: 18, night: 12 },
+        { day: 'Thu', morning: 7, afternoon: 9, evening: 14, night: 9 },
+        { day: 'Fri', morning: 9, afternoon: 12, evening: 22, night: 18 },
+        { day: 'Sat', morning: 10, afternoon: 15, evening: 25, night: 20 },
+        { day: 'Sun', morning: 8, afternoon: 11, evening: 16, night: 14 },
+      ]);
+      
+      setCompletionTasks([
+        { task: 'Add 1 more interest', completed: false },
+        { task: 'Upload 1 more photo', completed: false },
+        { task: 'Answer 1 prompt', completed: false },
+      ]);
+      
+      setTrendingTags([
+        { tag: 'Photography', popularity: 92 },
+        { tag: 'Hiking', popularity: 87 },
+        { tag: 'Cooking', popularity: 78 },
+        { tag: 'Yoga', popularity: 72 },
+        { tag: 'Travel', popularity: 68 },
+      ]);
+      
+      setTopPhoto({
+        url: 'https://randomuser.me/api/portraits/men/32.jpg',
+        likeRate: 60,
+      });
+      
+      setVibeRatings(['Mysterious', 'Stylish', 'Witty']);
+      
+      setBoostRecommendation({
+        day: 'Friday',
+        time: '8:00 PM',
+        multiplier: '10x',
+      });
+      
+      setWeeklyData([
+        { day: 'Mon', views: 12 },
+        { day: 'Tue', views: 18 },
+        { day: 'Wed', views: 25 },
+        { day: 'Thu', views: 15 },
+        { day: 'Fri', views: 30 },
+        { day: 'Sat', views: 42 },
+        { day: 'Sun', views: 22 },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
   };
   
-  const vibeRatings = ['Mysterious', 'Stylish', 'Witty'];
-  
-  const boostRecommendation = {
-    day: 'Friday',
-    time: '8:00 PM',
-    multiplier: '10x',
+  const getRandomColor = () => {
+    const colors = ['#FF6B6B', '#4ECDC4', '#FFD166', '#06D6A0', '#118AB2', '#073B4C'];
+    return colors[Math.floor(Math.random() * colors.length)];
   };
   
-  const weeklyData = [
-    { day: 'Mon', views: 12 },
-    { day: 'Tue', views: 18 },
-    { day: 'Wed', views: 25 },
-    { day: 'Thu', views: 15 },
-    { day: 'Fri', views: 30 },
-    { day: 'Sat', views: 42 },
-    { day: 'Sun', views: 22 },
-  ];
+  useEffect(() => {
+    fetchInsights();
+  }, []);
   
-  const maxViews = Math.max(...weeklyData.map(item => item.views));
+  const maxViews = weeklyData.length > 0 ? Math.max(...weeklyData.map(item => item.views)) : 0;
   
   const shareInsights = async () => {
     try {
@@ -268,6 +464,31 @@ const InsightsTab = () => {
     );
   };
 
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={COLORS.SECONDARY} />
+        <Text style={styles.loadingText}>Loading insights...</Text>
+      </View>
+    );
+  }
+  
+  if (error) {
+    return (
+      <View style={styles.errorContainer}>
+        <Ionicons name="alert-circle-outline" size={60} color="rgba(255, 255, 255, 0.2)" />
+        <Text style={styles.errorTitle}>Something went wrong</Text>
+        <Text style={styles.errorMessage}>{error}</Text>
+        <TouchableOpacity 
+          style={styles.retryButton}
+          onPress={fetchInsights}
+        >
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+  
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* Header */}
@@ -280,7 +501,10 @@ const InsightsTab = () => {
           >
             <Ionicons name="share-social" size={20} color={COLORS.SECONDARY} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.refreshButton}>
+          <TouchableOpacity 
+            style={styles.refreshButton}
+            onPress={fetchInsights}
+          >
             <Ionicons name="refresh" size={20} color={COLORS.SECONDARY} />
           </TouchableOpacity>
         </View>
@@ -619,6 +843,49 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.PRIMARY,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.PRIMARY,
+    padding: 20,
+  },
+  loadingText: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 16,
+    marginTop: 16,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.PRIMARY,
+    padding: 20,
+  },
+  errorTitle: {
+    color: COLORS.SECONDARY,
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  errorMessage: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  retryButton: {
+    backgroundColor: COLORS.SECONDARY,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 24,
+  },
+  retryButtonText: {
+    color: COLORS.PRIMARY,
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   header: {
     flexDirection: 'row',
