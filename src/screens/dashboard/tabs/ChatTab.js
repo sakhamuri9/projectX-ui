@@ -7,110 +7,35 @@ import {
   TouchableOpacity,
   FlatList,
   TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../../styles/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import webSocketService from '../../../utils/WebSocketService';
+import ApiService from '../../../services/ApiService';
 
 const ChatTab = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [userId, setUserId] = useState(null);
   const [unreadMessages, setUnreadMessages] = useState({});
-  
-  const conversations = [
-    {
-      id: 1,
-      user: {
-        id: 2,
-        name: 'Jessica',
-        image: 'https://randomuser.me/api/portraits/women/33.jpg',
-        isOnline: true,
-      },
-      lastMessage: {
-        text: 'I would love to go to that new restaurant downtown!',
-        time: '10:42 AM',
-        isRead: true,
-        isSent: false,
-      },
-      unreadCount: 0,
-    },
-    {
-      id: 2,
-      user: {
-        id: 3,
-        name: 'Michael',
-        image: 'https://randomuser.me/api/portraits/men/52.jpg',
-        isOnline: false,
-      },
-      lastMessage: {
-        text: 'Are you free this weekend?',
-        time: 'Yesterday',
-        isRead: true,
-        isSent: false,
-      },
-      unreadCount: 0,
-    },
-    {
-      id: 3,
-      user: {
-        id: 4,
-        name: 'Sophia',
-        image: 'https://randomuser.me/api/portraits/women/44.jpg',
-        isOnline: true,
-      },
-      lastMessage: {
-        text: 'Just saw your profile picture, it looks great!',
-        time: 'Yesterday',
-        isRead: false,
-        isSent: false,
-      },
-      unreadCount: 2,
-    },
-    {
-      id: 4,
-      user: {
-        id: 5,
-        name: 'David',
-        image: 'https://randomuser.me/api/portraits/men/46.jpg',
-        isOnline: true,
-      },
-      lastMessage: {
-        text: 'Thanks for the recommendation!',
-        time: '2 days ago',
-        isRead: true,
-        isSent: true,
-      },
-      unreadCount: 0,
-    },
-    {
-      id: 5,
-      user: {
-        id: 6,
-        name: 'Emma',
-        image: 'https://randomuser.me/api/portraits/women/22.jpg',
-        isOnline: false,
-      },
-      lastMessage: {
-        text: 'I love hiking too! We should go sometime.',
-        time: '3 days ago',
-        isRead: true,
-        isSent: false,
-      },
-      unreadCount: 0,
-    },
-  ];
+  const [conversations, setConversations] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const initializeChat = async () => {
       try {
         const storedUserId = await AsyncStorage.getItem('userId');
         if (storedUserId) {
-          setUserId(parseInt(storedUserId, 10));
+          const parsedUserId = parseInt(storedUserId, 10);
+          setUserId(parsedUserId);
           
-          webSocketService.connect(parseInt(storedUserId, 10));
+          webSocketService.connect(parsedUserId);
           
           webSocketService.onMessage('message', handleNewMessage);
+          
+          fetchConversations();
         } else {
           setUserId(1);
           await AsyncStorage.setItem('userId', '1');
@@ -118,9 +43,13 @@ const ChatTab = ({ navigation }) => {
           webSocketService.connect(1);
           
           webSocketService.onMessage('message', handleNewMessage);
+          
+          fetchConversations();
         }
       } catch (error) {
         console.error('Error initializing chat:', error);
+        setError('Failed to initialize chat. Please try again.');
+        setIsLoading(false);
       }
     };
     
@@ -131,12 +60,32 @@ const ChatTab = ({ navigation }) => {
     };
   }, []);
   
+  const fetchConversations = async () => {
+    try {
+      setIsLoading(true);
+      const response = await ApiService.chat.getConversations();
+      
+      if (response && response.data) {
+        setConversations(response.data.content || []);
+      } else {
+        setConversations([]);
+      }
+    } catch (error) {
+      console.error('Error fetching conversations:', error);
+      setError('Failed to load conversations. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
   const handleNewMessage = (message) => {
     if (message.senderId !== userId) {
       setUnreadMessages(prev => ({
         ...prev,
         [message.senderId]: (prev[message.senderId] || 0) + 1
       }));
+      
+      fetchConversations();
     }
   };
 
@@ -190,7 +139,10 @@ const ChatTab = ({ navigation }) => {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Messages</Text>
-        <TouchableOpacity style={styles.newChatButton}>
+        <TouchableOpacity 
+          style={styles.newChatButton}
+          onPress={() => navigation.navigate('MatchesTab')}
+        >
           <Ionicons name="create-outline" size={20} color={COLORS.SECONDARY} />
         </TouchableOpacity>
       </View>
@@ -223,13 +175,32 @@ const ChatTab = ({ navigation }) => {
         </TouchableOpacity>
       </View>
       
-      {filteredConversations.length > 0 ? (
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.SECONDARY} />
+          <Text style={styles.loadingText}>Loading conversations...</Text>
+        </View>
+      ) : error ? (
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle-outline" size={60} color="rgba(255, 255, 255, 0.2)" />
+          <Text style={styles.errorTitle}>Something went wrong</Text>
+          <Text style={styles.errorMessage}>{error}</Text>
+          <TouchableOpacity 
+            style={styles.retryButton}
+            onPress={fetchConversations}
+          >
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      ) : filteredConversations.length > 0 ? (
         <FlatList
           data={filteredConversations}
           renderItem={renderConversationItem}
           keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={styles.conversationsList}
           showsVerticalScrollIndicator={false}
+          refreshing={isLoading}
+          onRefresh={fetchConversations}
         />
       ) : (
         <View style={styles.emptyContainer}>
@@ -242,7 +213,10 @@ const ChatTab = ({ navigation }) => {
           </Text>
           
           {!searchQuery && (
-            <TouchableOpacity style={styles.startChatButton}>
+            <TouchableOpacity 
+              style={styles.startChatButton}
+              onPress={() => navigation.navigate('MatchesTab')}
+            >
               <Text style={styles.startChatText}>Find Matches</Text>
             </TouchableOpacity>
           )}
@@ -428,6 +402,47 @@ const styles = StyleSheet.create({
     borderRadius: 24,
   },
   startChatText: {
+    color: COLORS.PRIMARY,
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginTop: 16,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  errorTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: COLORS.SECONDARY,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  errorMessage: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.7)',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  retryButton: {
+    backgroundColor: COLORS.SECONDARY,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 24,
+  },
+  retryButtonText: {
     color: COLORS.PRIMARY,
     fontSize: 16,
     fontWeight: 'bold',

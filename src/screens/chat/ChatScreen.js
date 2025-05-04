@@ -12,12 +12,14 @@ import {
   ActivityIndicator,
   SafeAreaView,
   StatusBar,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS } from '../../styles/theme';
 import webSocketService from '../../utils/WebSocketService';
+import ApiService from '../../services/ApiService';
 
 const ChatScreen = ({ route, navigation }) => {
   const { conversation } = route.params;
@@ -65,68 +67,25 @@ const ChatScreen = ({ route, navigation }) => {
   
   const fetchMessages = async (receiverId) => {
     try {
-      setTimeout(() => {
-        const mockMessages = [
-          {
-            id: 1,
-            senderId: userId || 1,
-            receiverId: receiverId,
-            content: 'Hey there! How are you doing?',
-            timestamp: new Date(Date.now() - 3600000).toISOString(),
-            isRead: true,
-            type: 'TEXT'
-          },
-          {
-            id: 2,
-            senderId: receiverId,
-            receiverId: userId || 1,
-            content: 'I\'m good! Just checking out this new app.',
-            timestamp: new Date(Date.now() - 3500000).toISOString(),
-            isRead: true,
-            type: 'TEXT'
-          },
-          {
-            id: 3,
-            senderId: userId || 1,
-            receiverId: receiverId,
-            content: 'It\'s pretty cool, right? I love the UI.',
-            timestamp: new Date(Date.now() - 3400000).toISOString(),
-            isRead: true,
-            type: 'TEXT'
-          },
-          {
-            id: 4,
-            senderId: receiverId,
-            receiverId: userId || 1,
-            content: 'Yeah, it\'s awesome! 😊',
-            timestamp: new Date(Date.now() - 3300000).toISOString(),
-            isRead: true,
-            type: 'TEXT'
-          },
-          {
-            id: 5,
-            senderId: receiverId,
-            receiverId: userId || 1,
-            content: 'https://randomuser.me/api/portraits/women/33.jpg',
-            timestamp: new Date(Date.now() - 3200000).toISOString(),
-            isRead: true,
-            type: 'IMAGE'
-          },
-          {
-            id: 6,
-            senderId: userId || 1,
-            receiverId: receiverId,
-            content: 'Wow, nice picture! 👍',
-            timestamp: new Date(Date.now() - 3100000).toISOString(),
-            isRead: true,
-            type: 'TEXT'
-          }
-        ];
-        
-        setMessages(mockMessages);
-      }, 1000);
+      setIsLoading(true);
+      const response = await ApiService.chat.getMessages(receiverId);
+      
+      if (response && response.data) {
+        setMessages(response.data.content || []);
+      } else {
+        setMessages([]);
+      }
+      
+      await ApiService.chat.markAsRead(receiverId);
     } catch (error) {
       console.error('Error fetching messages:', error);
+      Alert.alert(
+        'Error',
+        'Failed to load messages. Please try again.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsLoading(false);
     }
   };
   
@@ -183,27 +142,50 @@ const ChatScreen = ({ route, navigation }) => {
     webSocketService.sendTypingIndicator(conversation.user.id);
   };
   
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (inputText.trim() === '') return;
     
-    const newMessage = {
-      id: Date.now(),
-      senderId: userId,
-      receiverId: conversation.user.id,
-      content: inputText.trim(),
-      timestamp: new Date().toISOString(),
-      isRead: false,
-      type: 'TEXT'
-    };
-    
-    setMessages(prevMessages => [...prevMessages, newMessage]);
-    
-    webSocketService.sendChatMessage(conversation.user.id, inputText.trim());
-    
-    setInputText('');
-    
-    if (flatListRef.current) {
-      flatListRef.current.scrollToEnd({ animated: true });
+    try {
+      const tempId = Date.now();
+      const newMessage = {
+        id: tempId,
+        senderId: userId,
+        receiverId: conversation.user.id,
+        content: inputText.trim(),
+        timestamp: new Date().toISOString(),
+        isRead: false,
+        type: 'TEXT'
+      };
+      
+      setMessages(prevMessages => [...prevMessages, newMessage]);
+      setInputText('');
+      
+      if (flatListRef.current) {
+        flatListRef.current.scrollToEnd({ animated: true });
+      }
+      
+      webSocketService.sendChatMessage(conversation.user.id, inputText.trim());
+      
+      const response = await ApiService.chat.sendMessage(
+        conversation.user.id, 
+        inputText.trim(), 
+        'TEXT'
+      );
+      
+      if (response && response.data && response.data.id) {
+        setMessages(prevMessages => 
+          prevMessages.map(msg => 
+            msg.id === tempId ? { ...msg, id: response.data.id } : msg
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      Alert.alert(
+        'Error',
+        'Failed to send message. Please try again.',
+        [{ text: 'OK' }]
+      );
     }
   };
   
@@ -212,7 +194,11 @@ const ChatScreen = ({ route, navigation }) => {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       
       if (status !== 'granted') {
-        alert('Sorry, we need camera roll permissions to upload images!');
+        Alert.alert(
+          'Permission Required',
+          'We need camera roll permissions to upload images.',
+          [{ text: 'OK' }]
+        );
         return;
       }
       
@@ -226,11 +212,18 @@ const ChatScreen = ({ route, navigation }) => {
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const selectedImage = result.assets[0];
         
+        const imageData = {
+          uri: selectedImage.uri,
+          type: 'image/jpeg',
+          name: `image_${Date.now()}.jpg`,
+        };
+        
+        const tempId = Date.now();
         const newMessage = {
-          id: Date.now(),
+          id: tempId,
           senderId: userId,
           receiverId: conversation.user.id,
-          content: selectedImage.uri,
+          content: selectedImage.uri, // Use local URI for preview
           timestamp: new Date().toISOString(),
           isRead: false,
           type: 'IMAGE'
@@ -238,14 +231,42 @@ const ChatScreen = ({ route, navigation }) => {
         
         setMessages(prevMessages => [...prevMessages, newMessage]);
         
-        webSocketService.sendChatMessage(conversation.user.id, selectedImage.uri);
-        
         if (flatListRef.current) {
           flatListRef.current.scrollToEnd({ animated: true });
+        }
+        
+        webSocketService.sendChatMessage(conversation.user.id, selectedImage.uri);
+        
+        try {
+          const response = await ApiService.chat.uploadImage(conversation.user.id, imageData);
+          
+          if (response && response.data && response.data.id) {
+            setMessages(prevMessages => 
+              prevMessages.map(msg => 
+                msg.id === tempId ? { 
+                  ...msg, 
+                  id: response.data.id,
+                  content: response.data.content // Use server URL instead of local URI
+                } : msg
+              )
+            );
+          }
+        } catch (uploadError) {
+          console.error('Error uploading image:', uploadError);
+          Alert.alert(
+            'Upload Failed',
+            'Failed to upload image. Please try again.',
+            [{ text: 'OK' }]
+          );
         }
       }
     } catch (error) {
       console.error('Error picking image:', error);
+      Alert.alert(
+        'Error',
+        'Failed to access image library. Please try again.',
+        [{ text: 'OK' }]
+      );
     }
   };
   
