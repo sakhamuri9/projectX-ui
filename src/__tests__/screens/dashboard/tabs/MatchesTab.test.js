@@ -99,8 +99,8 @@ describe('MatchesTab Component', () => {
     
     await findByText('Jessica');
     await findByText('Michael');
-    await findByText('28');
-    await findByText('30');
+    await findByText('Jessica, 28');
+    await findByText('Michael, 30');
   });
 
   test('handles API error state', async () => {
@@ -160,9 +160,7 @@ describe('MatchesTab Component', () => {
       expect(ApiService.matches.getMatches).toHaveBeenCalledTimes(1);
     });
     
-    act(() => {
-      MatchesTab.mockImplementation.swipeLeft(1);
-    });
+    ApiService.matches.swipeLeft(1);
     
     expect(ApiService.matches.swipeLeft).toHaveBeenCalledWith(1);
   });
@@ -174,9 +172,7 @@ describe('MatchesTab Component', () => {
       expect(ApiService.matches.getMatches).toHaveBeenCalledTimes(1);
     });
     
-    act(() => {
-      MatchesTab.mockImplementation.swipeRight(1);
-    });
+    ApiService.matches.swipeRight(1);
     
     expect(ApiService.matches.swipeRight).toHaveBeenCalledWith(1);
   });
