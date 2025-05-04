@@ -4,6 +4,21 @@ import MatchesTab from '../../../../screens/dashboard/tabs/MatchesTab';
 import ApiService from '../../../../services/ApiService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+jest.mock('../../../../screens/dashboard/tabs/MatchesTab', () => {
+  const originalModule = jest.requireActual('../../../../screens/dashboard/tabs/MatchesTab');
+  const component = function(props) {
+    component.mockImplementation.props = props;
+    return originalModule.default(props);
+  };
+  component.mockImplementation = {
+    props: null,
+    swipeLeft: jest.fn(),
+    swipeRight: jest.fn(),
+    superLike: jest.fn(),
+  };
+  return component;
+});
+
 jest.mock('../../../../services/ApiService', () => ({
   matches: {
     getMatches: jest.fn(),
@@ -12,6 +27,13 @@ jest.mock('../../../../services/ApiService', () => ({
     superLike: jest.fn(),
   },
 }));
+
+jest.mock('react-native-deck-swiper', () => {
+  const { View } = require('react-native');
+  return {
+    default: View,
+  };
+});
 
 const mockNavigation = {
   navigate: jest.fn(),
@@ -36,6 +58,7 @@ describe('MatchesTab Component', () => {
             bio: 'Love hiking and photography',
             images: ['https://randomuser.me/api/portraits/women/33.jpg'],
             interests: ['Travel', 'Photography', 'Coffee'],
+            mutualInterests: ['Coffee'],
             compatibility: 85,
           },
           {
@@ -46,6 +69,7 @@ describe('MatchesTab Component', () => {
             bio: 'Fitness enthusiast and coffee lover',
             images: ['https://randomuser.me/api/portraits/men/52.jpg'],
             interests: ['Fitness', 'Coffee', 'Technology'],
+            mutualInterests: ['Coffee'],
             compatibility: 78,
           },
         ],
@@ -128,28 +152,30 @@ describe('MatchesTab Component', () => {
   });
 
   test('calls swipeLeft API when swiping left', async () => {
-    const { findByText } = render(<MatchesTab navigation={mockNavigation} />);
-    
-    await findByText('Jessica');
-    
-    const instance = MatchesTab.mock.instances[0];
-    instance.swipeLeft();
+    render(<MatchesTab navigation={mockNavigation} />);
     
     await waitFor(() => {
-      expect(ApiService.matches.swipeLeft).toHaveBeenCalledWith(1);
+      expect(ApiService.matches.getMatches).toHaveBeenCalledTimes(1);
     });
+    
+    act(() => {
+      MatchesTab.mockImplementation.swipeLeft(1);
+    });
+    
+    expect(ApiService.matches.swipeLeft).toHaveBeenCalledWith(1);
   });
 
   test('calls swipeRight API when swiping right', async () => {
-    const { findByText } = render(<MatchesTab navigation={mockNavigation} />);
-    
-    await findByText('Jessica');
-    
-    const instance = MatchesTab.mock.instances[0];
-    instance.swipeRight();
+    render(<MatchesTab navigation={mockNavigation} />);
     
     await waitFor(() => {
-      expect(ApiService.matches.swipeRight).toHaveBeenCalledWith(1);
+      expect(ApiService.matches.getMatches).toHaveBeenCalledTimes(1);
     });
+    
+    act(() => {
+      MatchesTab.mockImplementation.swipeRight(1);
+    });
+    
+    expect(ApiService.matches.swipeRight).toHaveBeenCalledWith(1);
   });
 });
