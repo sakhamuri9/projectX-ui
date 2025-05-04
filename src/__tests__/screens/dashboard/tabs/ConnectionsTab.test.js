@@ -4,6 +4,22 @@ import ConnectionsTab from '../../../../screens/dashboard/tabs/ConnectionsTab';
 import ApiService from '../../../../services/ApiService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+jest.mock('../../../../screens/dashboard/tabs/ConnectionsTab', () => {
+  const originalModule = jest.requireActual('../../../../screens/dashboard/tabs/ConnectionsTab');
+  const component = function(props) {
+    component.mockImplementation.props = props;
+    return originalModule.default(props);
+  };
+  component.mockImplementation = {
+    props: null,
+    acceptMatch: jest.fn(),
+    rejectMatch: jest.fn(),
+    saveProfile: jest.fn(),
+    unsaveProfile: jest.fn(),
+  };
+  return component;
+});
+
 jest.mock('../../../../services/ApiService', () => ({
   connections: {
     getMutualMatches: jest.fn(),
