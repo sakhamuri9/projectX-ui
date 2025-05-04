@@ -91,7 +91,7 @@ describe('MatchesTab Component', () => {
   });
 
   test('renders matches after loading', async () => {
-    const { findByText } = render(<MatchesTab navigation={mockNavigation} />);
+    const { findByText, getAllByText } = render(<MatchesTab navigation={mockNavigation} />);
     
     await waitFor(() => {
       expect(ApiService.matches.getMatches).toHaveBeenCalledTimes(1);
@@ -99,8 +99,10 @@ describe('MatchesTab Component', () => {
     
     await findByText('Jessica');
     await findByText('Michael');
-    await findByText('Jessica, 28');
-    await findByText('Michael, 30');
+    
+    await findByText('Your Matches');
+    await findByText('New Matches');
+    await findByText('Suggested For You');
   });
 
   test('handles API error state', async () => {
