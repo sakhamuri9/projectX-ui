@@ -72,6 +72,7 @@ describe('ConnectionsTab Component', () => {
         content: [
           {
             id: 3,
+            userId: 3,
             name: 'Sophia',
             age: 26,
             image: 'https://randomuser.me/api/portraits/women/44.jpg',
@@ -87,6 +88,7 @@ describe('ConnectionsTab Component', () => {
         content: [
           {
             id: 4,
+            userId: 4,
             name: 'David',
             age: 32,
             image: 'https://randomuser.me/api/portraits/men/46.jpg',
