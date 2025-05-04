@@ -1,5 +1,8 @@
 import webSocketService from '../../utils/WebSocketService';
 
+const originalConsoleLog = console.log;
+const originalConsoleError = console.error;
+
 global.WebSocket = jest.fn(() => ({
   send: jest.fn(),
   close: jest.fn(),
@@ -13,6 +16,9 @@ describe('WebSocketService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     
+    console.log = jest.fn();
+    console.error = jest.fn();
+    
     mockWebSocket = {
       send: jest.fn(),
       close: jest.fn(),
@@ -21,6 +27,15 @@ describe('WebSocketService', () => {
     };
     
     global.WebSocket.mockImplementation(() => mockWebSocket);
+  });
+  
+  afterEach(() => {
+    webSocketService.disconnect();
+    
+    console.log = originalConsoleLog;
+    console.error = originalConsoleError;
+    
+    jest.useRealTimers();
   });
   
   test('connect should create a WebSocket connection with the correct URL', () => {
@@ -85,14 +100,9 @@ describe('WebSocketService', () => {
     jest.advanceTimersByTime(3000);
     
     expect(global.WebSocket).toHaveBeenCalledWith('wss://api.soulnest.com/ws/chat?userId=123');
-    
-    jest.useRealTimers();
   });
   
   test('should handle connection errors', () => {
-    const originalConsoleError = console.error;
-    console.error = jest.fn();
-    
     webSocketService.connect(123);
     
     const errorHandler = mockWebSocket.addEventListener.mock.calls.find(call => call[0] === 'error')[1];
@@ -100,8 +110,6 @@ describe('WebSocketService', () => {
     errorHandler(error);
     
     expect(console.error).toHaveBeenCalledWith('WebSocket error:', error);
-    
-    console.error = originalConsoleError;
   });
   
   test('should not send messages if not connected', () => {
