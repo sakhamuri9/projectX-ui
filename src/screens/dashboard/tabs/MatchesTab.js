@@ -9,8 +9,10 @@ import {
   Dimensions,
   Animated,
   PanResponder,
+  Modal,
+  Slider,
 } from 'react-native';
-import { Ionicons, MaterialCommunityIcons, FontAwesome } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons, FontAwesome, MaterialIcons } from '@expo/vector-icons';
 import { COLORS } from '../../../styles/theme';
 
 const { width, height } = Dimensions.get('window');
@@ -24,6 +26,16 @@ const MatchesTab = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showLikeOverlay, setShowLikeOverlay] = useState(false);
   const [showDislikeOverlay, setShowDislikeOverlay] = useState(false);
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [showMatchReasonTooltip, setShowMatchReasonTooltip] = useState(false);
+  const [filterSettings, setFilterSettings] = useState({
+    radius: 10,
+    ageRange: [24, 30],
+    intent: 'both', // 'dating', 'marriage', 'both'
+    showOnlineOnly: false
+  });
+  const [matchStreak, setMatchStreak] = useState(3); // Days of consecutive matching
+  const [hasBoost, setHasBoost] = useState(false);
   
   const position = useRef(new Animated.ValueXY()).current;
   const cardScales = useRef([
@@ -134,7 +146,34 @@ const MatchesTab = () => {
     ]).start();
   };
   
+  const skipReactions = [
+    "Not My Vibe",
+    "Maybe Later",
+    "Not Feeling It",
+    "Next Please",
+    "Pass For Now"
+  ];
+  
+  const likeReactions = [
+    "Let's Talk",
+    "Great Match!",
+    "Definitely Yes",
+    "Interested!",
+    "Love This"
+  ];
+  
+  const [currentLikeReaction, setCurrentLikeReaction] = useState(likeReactions[0]);
+  const [currentSkipReaction, setCurrentSkipReaction] = useState(skipReactions[0]);
+  
+  const getRandomReaction = (reactions) => {
+    const randomIndex = Math.floor(Math.random() * reactions.length);
+    return reactions[randomIndex];
+  };
+  
   const swipeLeft = () => {
+    const reaction = getRandomReaction(likeReactions);
+    setCurrentLikeReaction(reaction);
+    
     setShowLikeOverlay(true);
     setLikeCount(prevCount => prevCount + 1);
     
@@ -156,6 +195,9 @@ const MatchesTab = () => {
   };
   
   const swipeRight = () => {
+    const reaction = getRandomReaction(skipReactions);
+    setCurrentSkipReaction(reaction);
+    
     setShowDislikeOverlay(true);
     setDislikeCount(prevCount => prevCount + 1);
     
@@ -200,6 +242,8 @@ const MatchesTab = () => {
     Animated.parallel(animations).start();
   };
 
+  const userInterests = ['Travel', 'Photography', 'Coffee', 'Fitness', 'Technology'];
+  
   const matches = [
     {
       id: 1,
@@ -211,6 +255,15 @@ const MatchesTab = () => {
       bio: 'Passionate about travel, photography, and meeting new people.',
       image: 'https://randomuser.me/api/portraits/women/33.jpg',
       interests: ['Travel', 'Photography', 'Cooking'],
+      mutualInterests: ['Travel', 'Photography'],
+      icebreaker: 'Ask Jessica about her favorite travel destination.',
+      matchReasons: [
+        'You both love photography',
+        'Located in the same city',
+        '85% personality compatibility'
+      ],
+      personalityType: 'Creative',
+      isOnline: true,
     },
     {
       id: 2,
@@ -222,6 +275,15 @@ const MatchesTab = () => {
       bio: 'Music lover, coffee enthusiast, and weekend hiker.',
       image: 'https://randomuser.me/api/portraits/men/52.jpg',
       interests: ['Music', 'Hiking', 'Coffee'],
+      mutualInterests: ['Coffee'],
+      icebreaker: 'Ask Michael about his favorite coffee brewing method.',
+      matchReasons: [
+        'You both enjoy coffee',
+        'Similar age group',
+        'Complementary interests'
+      ],
+      personalityType: 'Adventurous',
+      isOnline: false,
     },
     {
       id: 3,
@@ -233,6 +295,15 @@ const MatchesTab = () => {
       bio: 'Art director by day, painter by night. Love good conversations.',
       image: 'https://randomuser.me/api/portraits/women/44.jpg',
       interests: ['Art', 'Painting', 'Museums'],
+      mutualInterests: [],
+      icebreaker: 'Ask Sophia about her latest art project.',
+      matchReasons: [
+        'Located very close to you',
+        'Creative personality match',
+        'Enjoys meaningful conversations'
+      ],
+      personalityType: 'Creative',
+      isOnline: true,
     },
     {
       id: 4,
@@ -244,6 +315,15 @@ const MatchesTab = () => {
       bio: 'Tech entrepreneur, fitness enthusiast, and dog lover.',
       image: 'https://randomuser.me/api/portraits/men/46.jpg',
       interests: ['Technology', 'Fitness', 'Dogs'],
+      mutualInterests: ['Technology', 'Fitness'],
+      icebreaker: 'Ask David about his tech startup.',
+      matchReasons: [
+        'You both are into technology',
+        'Shared interest in fitness',
+        'Entrepreneurial mindset'
+      ],
+      personalityType: 'Ambitious',
+      isOnline: false,
     },
   ];
 
@@ -317,9 +397,37 @@ const MatchesTab = () => {
           )}
           
           <View style={styles.matchPercentageContainer}>
-            <Text style={styles.matchPercentage}>{match.matchPercentage}%</Text>
+            <View style={styles.matchPercentageRow}>
+              <Text style={styles.matchPercentage}>{match.matchPercentage}%</Text>
+              <TouchableOpacity 
+                style={styles.matchInfoButton}
+                onPress={() => setShowMatchReasonTooltip(true)}
+              >
+                <Ionicons name="information-circle-outline" size={16} color={COLORS.SECONDARY} />
+              </TouchableOpacity>
+            </View>
             <Text style={styles.matchText}>Match</Text>
           </View>
+          
+          {/* Match Reason Tooltip */}
+          {isTopCard && showMatchReasonTooltip && (
+            <View style={styles.matchReasonTooltip}>
+              <View style={styles.tooltipHeader}>
+                <Text style={styles.tooltipTitle}>Why This Match?</Text>
+                <TouchableOpacity onPress={() => setShowMatchReasonTooltip(false)}>
+                  <Ionicons name="close" size={20} color={COLORS.SECONDARY} />
+                </TouchableOpacity>
+              </View>
+              <View style={styles.tooltipContent}>
+                {match.matchReasons.map((reason, i) => (
+                  <View key={i} style={styles.reasonItem}>
+                    <Ionicons name="checkmark-circle" size={16} color="#34C759" style={styles.reasonIcon} />
+                    <Text style={styles.reasonText}>{reason}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
         </View>
         
         <View style={[styles.matchInfo, !isTopCard && styles.nonTopCardInfo]}>
@@ -344,12 +452,29 @@ const MatchesTab = () => {
             <>
               <Text style={styles.matchBio} numberOfLines={2}>{match.bio}</Text>
               
+              {/* Icebreaker Suggestion */}
+              <View style={styles.icebreaker}>
+                <Ionicons name="chatbubble-ellipses" size={16} color="#34C759" style={styles.icebreakIcon} />
+                <Text style={styles.icebreakText}>{match.icebreaker}</Text>
+              </View>
+              
               <View style={styles.interestsContainer}>
-                {match.interests.map((interest, i) => (
-                  <View key={i} style={styles.interestTag}>
-                    <Text style={styles.interestText}>{interest}</Text>
-                  </View>
-                ))}
+                {match.interests.map((interest, i) => {
+                  const isMutual = match.mutualInterests.includes(interest);
+                  return (
+                    <View key={i} style={[
+                      styles.interestTag, 
+                      isMutual && styles.mutualInterestTag
+                    ]}>
+                      <Text style={[
+                        styles.interestText,
+                        isMutual && styles.mutualInterestText
+                      ]}>
+                        {interest} {isMutual && '✅'}
+                      </Text>
+                    </View>
+                  );
+                })}
               </View>
               
               <View style={styles.cardActions}>
@@ -373,12 +498,187 @@ const MatchesTab = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Your Matches</Text>
-        <TouchableOpacity style={styles.filterButton}>
+        <View style={styles.headerLeft}>
+          <Text style={styles.headerTitle}>Your Matches</Text>
+          <View style={styles.streakContainer}>
+            <Ionicons name="flame" size={16} color="#FF9500" />
+            <Text style={styles.streakText}>Daily Streak: {matchStreak} Days</Text>
+            {hasBoost && <View style={styles.boostBadge}><Text style={styles.boostText}>BOOST</Text></View>}
+          </View>
+        </View>
+        <TouchableOpacity 
+          style={styles.filterButton}
+          onPress={() => setShowFilterModal(true)}
+        >
           <Ionicons name="filter" size={20} color={COLORS.SECONDARY} />
           <Text style={styles.filterText}>Filter</Text>
         </TouchableOpacity>
       </View>
+      
+      {/* Smart Filter Modal */}
+      <Modal
+        visible={showFilterModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowFilterModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.filterModal}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Smart Filters</Text>
+              <TouchableOpacity onPress={() => setShowFilterModal(false)}>
+                <Ionicons name="close" size={24} color={COLORS.SECONDARY} />
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={styles.filterContent}>
+              {/* Radius Slider */}
+              <View style={styles.filterSection}>
+                <Text style={styles.filterSectionTitle}>Distance</Text>
+                <Text style={styles.filterValue}>{filterSettings.radius} miles</Text>
+                <Slider
+                  style={styles.slider}
+                  minimumValue={1}
+                  maximumValue={30}
+                  step={1}
+                  value={filterSettings.radius}
+                  onValueChange={(value) => setFilterSettings({...filterSettings, radius: value})}
+                  minimumTrackTintColor={COLORS.SECONDARY}
+                  maximumTrackTintColor="rgba(255, 255, 255, 0.3)"
+                  thumbTintColor={COLORS.SECONDARY}
+                />
+                <View style={styles.sliderLabels}>
+                  <Text style={styles.sliderLabel}>1 mi</Text>
+                  <Text style={styles.sliderLabel}>30 mi</Text>
+                </View>
+              </View>
+              
+              {/* Age Range */}
+              <View style={styles.filterSection}>
+                <Text style={styles.filterSectionTitle}>Age Range</Text>
+                <Text style={styles.filterValue}>{filterSettings.ageRange[0]} - {filterSettings.ageRange[1]}</Text>
+                <View style={styles.ageRangeContainer}>
+                  <TouchableOpacity 
+                    style={styles.ageButton}
+                    onPress={() => {
+                      const newRange = [...filterSettings.ageRange];
+                      if (newRange[0] > 18) newRange[0] -= 1;
+                      setFilterSettings({...filterSettings, ageRange: newRange});
+                    }}
+                  >
+                    <Ionicons name="remove" size={20} color={COLORS.SECONDARY} />
+                  </TouchableOpacity>
+                  
+                  <View style={styles.ageRangeBar}>
+                    <Text style={styles.ageRangeText}>{filterSettings.ageRange[0]}</Text>
+                    <View style={styles.ageRangeLine} />
+                    <Text style={styles.ageRangeText}>{filterSettings.ageRange[1]}</Text>
+                  </View>
+                  
+                  <TouchableOpacity 
+                    style={styles.ageButton}
+                    onPress={() => {
+                      const newRange = [...filterSettings.ageRange];
+                      if (newRange[1] < 50) newRange[1] += 1;
+                      setFilterSettings({...filterSettings, ageRange: newRange});
+                    }}
+                  >
+                    <Ionicons name="add" size={20} color={COLORS.SECONDARY} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+              
+              {/* Intent Filter */}
+              <View style={styles.filterSection}>
+                <Text style={styles.filterSectionTitle}>Intent</Text>
+                <View style={styles.intentButtons}>
+                  <TouchableOpacity 
+                    style={[
+                      styles.intentButton, 
+                      filterSettings.intent === 'dating' && styles.intentButtonActive
+                    ]}
+                    onPress={() => setFilterSettings({...filterSettings, intent: 'dating'})}
+                  >
+                    <Text style={[
+                      styles.intentButtonText,
+                      filterSettings.intent === 'dating' && styles.intentButtonTextActive
+                    ]}>Dating</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={[
+                      styles.intentButton, 
+                      filterSettings.intent === 'marriage' && styles.intentButtonActive
+                    ]}
+                    onPress={() => setFilterSettings({...filterSettings, intent: 'marriage'})}
+                  >
+                    <Text style={[
+                      styles.intentButtonText,
+                      filterSettings.intent === 'marriage' && styles.intentButtonTextActive
+                    ]}>Marriage</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={[
+                      styles.intentButton, 
+                      filterSettings.intent === 'both' && styles.intentButtonActive
+                    ]}
+                    onPress={() => setFilterSettings({...filterSettings, intent: 'both'})}
+                  >
+                    <Text style={[
+                      styles.intentButtonText,
+                      filterSettings.intent === 'both' && styles.intentButtonTextActive
+                    ]}>Both</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+              
+              {/* Online Toggle */}
+              <View style={styles.filterSection}>
+                <View style={styles.toggleRow}>
+                  <Text style={styles.filterSectionTitle}>Show people online now</Text>
+                  <TouchableOpacity 
+                    style={[
+                      styles.toggleButton, 
+                      filterSettings.showOnlineOnly && styles.toggleButtonActive
+                    ]}
+                    onPress={() => setFilterSettings({
+                      ...filterSettings, 
+                      showOnlineOnly: !filterSettings.showOnlineOnly
+                    })}
+                  >
+                    <View style={[
+                      styles.toggleKnob, 
+                      filterSettings.showOnlineOnly && styles.toggleKnobActive
+                    ]} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </ScrollView>
+            
+            <View style={styles.filterActions}>
+              <TouchableOpacity 
+                style={styles.resetButton}
+                onPress={() => setFilterSettings({
+                  radius: 10,
+                  ageRange: [24, 30],
+                  intent: 'both',
+                  showOnlineOnly: false
+                })}
+              >
+                <Text style={styles.resetButtonText}>Reset</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.applyButton}
+                onPress={() => setShowFilterModal(false)}
+              >
+                <Text style={styles.applyButtonText}>Apply Filters</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
       
       {/* Like/Dislike Counters */}
       <View style={styles.countersContainer}>
@@ -397,12 +697,12 @@ const MatchesTab = () => {
       <View style={styles.swipeIndicatorsContainer}>
         <View style={[styles.swipeIndicator, styles.likeIndicator, showLikeOverlay && styles.activeIndicator]}>
           <Ionicons name="heart" size={40} color="#FF3B30" />
-          <Text style={styles.indicatorText}>LIKE</Text>
+          <Text style={styles.indicatorText}>{currentLikeReaction}</Text>
         </View>
         
         <View style={[styles.swipeIndicator, styles.dislikeIndicator, showDislikeOverlay && styles.activeIndicator]}>
           <Ionicons name="close-circle" size={40} color="#8E8E93" />
-          <Text style={styles.indicatorText}>NOPE</Text>
+          <Text style={styles.indicatorText}>{currentSkipReaction}</Text>
         </View>
       </View>
       
@@ -440,6 +740,7 @@ const MatchesTab = () => {
         </ScrollView>
       </View>
       
+      {/* Group Mini Carousel for Suggestions */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Suggested For You</Text>
@@ -448,26 +749,98 @@ const MatchesTab = () => {
           </TouchableOpacity>
         </View>
         
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.suggestedList}
-        >
-          {matches.slice().reverse().map((match) => (
-            <TouchableOpacity key={match.id} style={styles.suggestedItem}>
-              <Image source={{ uri: match.image }} style={styles.suggestedImage} />
-              <View style={styles.suggestedInfo}>
-                <Text style={styles.suggestedName}>{match.name}, {match.age}</Text>
-                <Text style={styles.suggestedLocation}>{match.location}</Text>
-                <View style={styles.suggestedInterests}>
-                  {match.interests.slice(0, 1).map((interest, i) => (
-                    <Text key={i} style={styles.suggestedInterest}>{interest}</Text>
-                  ))}
+        {/* Travel Enthusiasts Group */}
+        <View style={styles.suggestionGroup}>
+          <View style={styles.groupHeader}>
+            <Ionicons name="airplane" size={18} color={COLORS.SECONDARY} />
+            <Text style={styles.groupTitle}>🧳 Travel Enthusiasts</Text>
+          </View>
+          
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.suggestedList}
+          >
+            {matches.filter(match => match.interests.includes('Travel')).map((match) => (
+              <TouchableOpacity key={match.id} style={styles.suggestedItem}>
+                <Image source={{ uri: match.image }} style={styles.suggestedImage} />
+                <View style={styles.suggestedInfo}>
+                  <Text style={styles.suggestedName}>{match.name}, {match.age}</Text>
+                  <Text style={styles.suggestedLocation}>{match.location}</Text>
+                  <View style={styles.suggestedInterests}>
+                    <Text style={styles.suggestedInterest}>Travel</Text>
+                  </View>
                 </View>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+        
+        {/* Creative Souls Group */}
+        <View style={styles.suggestionGroup}>
+          <View style={styles.groupHeader}>
+            <Ionicons name="color-palette" size={18} color={COLORS.SECONDARY} />
+            <Text style={styles.groupTitle}>🎨 Creative Souls</Text>
+          </View>
+          
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.suggestedList}
+          >
+            {matches.filter(match => 
+              match.interests.includes('Art') || 
+              match.interests.includes('Photography') || 
+              match.personalityType === 'Creative'
+            ).map((match) => (
+              <TouchableOpacity key={match.id} style={styles.suggestedItem}>
+                <Image source={{ uri: match.image }} style={styles.suggestedImage} />
+                <View style={styles.suggestedInfo}>
+                  <Text style={styles.suggestedName}>{match.name}, {match.age}</Text>
+                  <Text style={styles.suggestedLocation}>{match.location}</Text>
+                  <View style={styles.suggestedInterests}>
+                    {match.interests.filter(interest => 
+                      ['Art', 'Photography', 'Painting', 'Museums'].includes(interest)
+                    ).slice(0, 1).map((interest, i) => (
+                      <Text key={i} style={styles.suggestedInterest}>{interest}</Text>
+                    ))}
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+        
+        {/* Food Lovers Group */}
+        <View style={styles.suggestionGroup}>
+          <View style={styles.groupHeader}>
+            <Ionicons name="restaurant" size={18} color={COLORS.SECONDARY} />
+            <Text style={styles.groupTitle}>🥘 Food Lovers</Text>
+          </View>
+          
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.suggestedList}
+          >
+            {matches.filter(match => match.interests.includes('Cooking') || match.interests.includes('Coffee')).map((match) => (
+              <TouchableOpacity key={match.id} style={styles.suggestedItem}>
+                <Image source={{ uri: match.image }} style={styles.suggestedImage} />
+                <View style={styles.suggestedInfo}>
+                  <Text style={styles.suggestedName}>{match.name}, {match.age}</Text>
+                  <Text style={styles.suggestedLocation}>{match.location}</Text>
+                  <View style={styles.suggestedInterests}>
+                    {match.interests.filter(interest => 
+                      ['Cooking', 'Coffee', 'Food'].includes(interest)
+                    ).slice(0, 1).map((interest, i) => (
+                      <Text key={i} style={styles.suggestedInterest}>{interest}</Text>
+                    ))}
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
       </View>
     </View>
   );
@@ -490,6 +863,149 @@ const styles = StyleSheet.create({
   },
   nonTopCardInfo: {
     backgroundColor: 'rgba(0, 0, 0, 0.9)',
+  },
+  suggestionGroup: {
+    marginBottom: 16,
+  },
+  groupHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    paddingHorizontal: 16,
+  },
+  groupTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: COLORS.SECONDARY,
+    marginLeft: 8,
+  },
+  mutualInterestTag: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginRight: 6,
+    marginBottom: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  mutualInterestText: {
+    color: COLORS.SECONDARY,
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  mutualInterestCheck: {
+    marginLeft: 4,
+    color: '#34C759',
+  },
+  icebreaker: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  icebreakerTitle: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginBottom: 4,
+  },
+  icebreakerText: {
+    fontSize: 14,
+    color: COLORS.SECONDARY,
+    fontStyle: 'italic',
+  },
+  matchReasonButton: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 6,
+  },
+  matchReasonTooltip: {
+    position: 'absolute',
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    padding: 12,
+    borderRadius: 8,
+    width: '80%',
+    top: -120,
+    left: '10%',
+    zIndex: 100,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+  },
+  matchReasonTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: COLORS.SECONDARY,
+    marginBottom: 8,
+  },
+  matchReasonItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  matchReasonText: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginLeft: 6,
+  },
+  headerLeft: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+  },
+  streakContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  streakText: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginLeft: 4,
+  },
+  boostBadge: {
+    backgroundColor: '#FF9500',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginLeft: 8,
+  },
+  boostText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: COLORS.PRIMARY,
+  },
+  overlayContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 100,
+  },
+  likeOverlay: {
+    backgroundColor: 'rgba(52, 199, 89, 0.2)',
+    borderRadius: 20,
+    padding: 20,
+    alignItems: 'center',
+  },
+  dislikeOverlay: {
+    backgroundColor: 'rgba(255, 59, 48, 0.2)',
+    borderRadius: 20,
+    padding: 20,
+    alignItems: 'center',
+  },
+  overlayText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: COLORS.SECONDARY,
+    marginTop: 10,
   },
   header: {
     flexDirection: 'row',
