@@ -10,6 +10,7 @@ import PersonalInfoScreen from './src/screens/signup/PersonalInfoScreen';
 import MatchPreferencesScreen from './src/screens/signup/MatchPreferencesScreen';
 import ProfileSetupScreen from './src/screens/signup/ProfileSetupScreen';
 import DashboardScreen from './src/screens/dashboard/DashboardScreen';
+import ChatScreen from './src/screens/chat/ChatScreen';
 import { SignupProvider } from './src/context/SignupContext';
 import Toast from 'react-native-toast-message';
 
@@ -129,7 +130,23 @@ export default function App() {
         );
       
       case 'dashboard':
-        return <DashboardScreen relationshipIntent={relationshipIntent} />;
+        return <DashboardScreen 
+                 relationshipIntent={relationshipIntent} 
+                 navigation={{
+                   navigate: (screenName, params) => {
+                     if (screenName === 'ChatScreen') {
+                       return (
+                         <ChatScreen 
+                           conversation={params.conversation}
+                           navigation={{
+                             goBack: () => setCurrentScreen('dashboard')
+                           }}
+                         />
+                       );
+                     }
+                   }
+                 }}
+               />;
       
       default:
         return <SplashScreen onSignIn={handleSignIn} onSignUp={handleSignUp} />;

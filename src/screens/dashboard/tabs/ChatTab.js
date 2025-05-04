@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -10,14 +10,19 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../../styles/theme';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import webSocketService from '../../../utils/WebSocketService';
 
-const ChatTab = () => {
+const ChatTab = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [userId, setUserId] = useState(null);
+  const [unreadMessages, setUnreadMessages] = useState({});
   
   const conversations = [
     {
       id: 1,
       user: {
+        id: 2,
         name: 'Jessica',
         image: 'https://randomuser.me/api/portraits/women/33.jpg',
         isOnline: true,
@@ -33,6 +38,7 @@ const ChatTab = () => {
     {
       id: 2,
       user: {
+        id: 3,
         name: 'Michael',
         image: 'https://randomuser.me/api/portraits/men/52.jpg',
         isOnline: false,
@@ -48,6 +54,7 @@ const ChatTab = () => {
     {
       id: 3,
       user: {
+        id: 4,
         name: 'Sophia',
         image: 'https://randomuser.me/api/portraits/women/44.jpg',
         isOnline: true,
@@ -63,6 +70,7 @@ const ChatTab = () => {
     {
       id: 4,
       user: {
+        id: 5,
         name: 'David',
         image: 'https://randomuser.me/api/portraits/men/46.jpg',
         isOnline: true,
@@ -78,6 +86,7 @@ const ChatTab = () => {
     {
       id: 5,
       user: {
+        id: 6,
         name: 'Emma',
         image: 'https://randomuser.me/api/portraits/women/22.jpg',
         isOnline: false,
@@ -92,6 +101,45 @@ const ChatTab = () => {
     },
   ];
 
+  useEffect(() => {
+    const initializeChat = async () => {
+      try {
+        const storedUserId = await AsyncStorage.getItem('userId');
+        if (storedUserId) {
+          setUserId(parseInt(storedUserId, 10));
+          
+          webSocketService.connect(parseInt(storedUserId, 10));
+          
+          webSocketService.onMessage('message', handleNewMessage);
+        } else {
+          setUserId(1);
+          await AsyncStorage.setItem('userId', '1');
+          
+          webSocketService.connect(1);
+          
+          webSocketService.onMessage('message', handleNewMessage);
+        }
+      } catch (error) {
+        console.error('Error initializing chat:', error);
+      }
+    };
+    
+    initializeChat();
+    
+    return () => {
+      webSocketService.disconnect();
+    };
+  }, []);
+  
+  const handleNewMessage = (message) => {
+    if (message.senderId !== userId) {
+      setUnreadMessages(prev => ({
+        ...prev,
+        [message.senderId]: (prev[message.senderId] || 0) + 1
+      }));
+    }
+  };
+
   const filteredConversations = searchQuery
     ? conversations.filter(conv => 
         conv.user.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -99,7 +147,10 @@ const ChatTab = () => {
     : conversations;
 
   const renderConversationItem = ({ item }) => (
-    <TouchableOpacity style={styles.conversationItem}>
+    <TouchableOpacity 
+      style={styles.conversationItem}
+      onPress={() => navigation.navigate('ChatScreen', { conversation: item })}
+    >
       <View style={styles.avatarContainer}>
         <Image source={{ uri: item.user.image }} style={styles.avatar} />
         {item.user.isOnline && <View style={styles.onlineIndicator} />}
@@ -123,9 +174,11 @@ const ChatTab = () => {
             {item.lastMessage.text}
           </Text>
           
-          {item.unreadCount > 0 && (
+          {(item.unreadCount > 0 || unreadMessages[item.user.id]) && (
             <View style={styles.unreadBadge}>
-              <Text style={styles.unreadCount}>{item.unreadCount}</Text>
+              <Text style={styles.unreadCount}>
+                {unreadMessages[item.user.id] || item.unreadCount}
+              </Text>
             </View>
           )}
         </View>
