@@ -184,10 +184,14 @@ describe('ConnectionsTab Component', () => {
   });
 
   test('accepts a pending match', async () => {
-    const { findByText, getByTestId } = render(<ConnectionsTab navigation={mockNavigation} />);
+    const { findByText, getByTestId, findByTestId } = render(<ConnectionsTab navigation={mockNavigation} />);
     
     await findByText('Pending Likes');
-    await findByText('Sophia');
+    await findByTestId('pending-likes-list');
+    
+    await waitFor(() => {
+      expect(getByTestId('accept-Sophia')).toBeTruthy();
+    });
     
     ApiService.connections.acceptMatch.mockResolvedValueOnce({
       data: { success: true },
@@ -206,10 +210,14 @@ describe('ConnectionsTab Component', () => {
   });
 
   test('rejects a pending match', async () => {
-    const { findByText, getByTestId } = render(<ConnectionsTab navigation={mockNavigation} />);
+    const { findByText, getByTestId, findByTestId } = render(<ConnectionsTab navigation={mockNavigation} />);
     
     await findByText('Pending Likes');
-    await findByText('Sophia');
+    await findByTestId('pending-likes-list');
+    
+    await waitFor(() => {
+      expect(getByTestId('reject-Sophia')).toBeTruthy();
+    });
     
     ApiService.connections.rejectMatch.mockResolvedValueOnce({
       data: { success: true },
@@ -228,10 +236,14 @@ describe('ConnectionsTab Component', () => {
   });
 
   test('unsaves a saved profile', async () => {
-    const { findByText, getByTestId } = render(<ConnectionsTab navigation={mockNavigation} />);
+    const { findByText, getByTestId, findByTestId } = render(<ConnectionsTab navigation={mockNavigation} />);
     
     await findByText('Saved Profiles');
-    await findByText('David');
+    await findByTestId('saved-profiles-list');
+    
+    await waitFor(() => {
+      expect(getByTestId('unsave-David')).toBeTruthy();
+    });
     
     ApiService.connections.unsaveProfile.mockResolvedValueOnce({
       data: { success: true },
