@@ -3,6 +3,7 @@ import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
 import ProfileTab from '../../../../screens/dashboard/tabs/ProfileTab';
 import ApiService from '../../../../services/ApiService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as ImageManipulator from 'expo-image-manipulator';
 
 jest.mock('../../../../services/ApiService', () => ({
   user: {
@@ -49,8 +50,8 @@ describe('ProfileTab Component', () => {
   test('renders loading state initially', async () => {
     const { getByText, queryByText } = render(<ProfileTab />);
     
-    expect(getByText('Loading profile...')).toBeTruthy();
-    expect(queryByText('John Doe')).toBeNull();
+    expect(getByText('Loading your profile...')).toBeTruthy();
+    expect(queryByText('John Doe, 30')).toBeNull();
     
     await waitFor(() => {
       expect(ApiService.user.getProfile).toHaveBeenCalledTimes(1);
@@ -81,7 +82,7 @@ describe('ProfileTab Component', () => {
     });
     
     await findByText('Something went wrong');
-    expect(getByText('Failed to load profile. Please try again.')).toBeTruthy();
+    expect(getByText('Failed to load profile data. Please try again.')).toBeTruthy();
     
     const retryButton = getByText('Retry');
     expect(retryButton).toBeTruthy();
