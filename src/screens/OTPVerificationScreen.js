@@ -12,6 +12,7 @@ import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../styles/theme';
 import OtpInputs from 'react-native-otp-inputs';
 import Toast from 'react-native-toast-message';
+import Clipboard from '../utils/ClipboardManager';
 
 const OTPVerificationScreen = ({ phoneNumber, onVerificationSuccess }) => {
   const [otp, setOtp] = useState('');
