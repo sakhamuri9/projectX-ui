@@ -15,23 +15,23 @@ import MatchesTab from './tabs/MatchesTab';
 import ConnectionsTab from './tabs/ConnectionsTab';
 import ChatTab from './tabs/ChatTab';
 
-const DashboardScreen = ({ relationshipIntent }) => {
+const DashboardScreen = ({ navigation, route, relationshipIntent }) => {
   const [activeTab, setActiveTab] = useState('matches');
 
   const renderTabContent = () => {
     switch (activeTab) {
       case 'profile':
-        return <ProfileTab />;
+        return <ProfileTab navigation={navigation} />;
       case 'insights':
-        return <InsightsTab />;
+        return <InsightsTab navigation={navigation} />;
       case 'matches':
-        return <MatchesTab />;
+        return <MatchesTab navigation={navigation} />;
       case 'connections':
-        return <ConnectionsTab />;
+        return <ConnectionsTab navigation={navigation} />;
       case 'chat':
-        return <ChatTab />;
+        return <ChatTab navigation={navigation} />;
       default:
-        return <MatchesTab />;
+        return <MatchesTab navigation={navigation} />;
     }
   };
 
